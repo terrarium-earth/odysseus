@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import parseStringifiedNbt from "./parseStringifiedNbt";
 import {RegistryValue, ResourceLocation} from "./types";
 import {HeraclesQuest, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
@@ -14,6 +13,8 @@ const enum ObserveType {
     ENTITY_TYPE_TAG
 }
 
+type QuestShape = 'circle' | 'square' | 'pentagon' | 'hexagon' | 'gear';
+
 type FtbId<T extends string> = `ftbquests:${T}` | T;
 
 type Long = string;
@@ -28,12 +29,20 @@ type Custom = {
     type: FtbId<'custom'>;
 };
 
-type Item = ResourceLocation | {
+type ItemStack = {
     id: ResourceLocation;
-    count?: number;
+    Count?: number;
 };
 
-type RewardTable = WithId & {
+type Item = ResourceLocation | ItemStack;
+
+type EntityWeight = {
+    passive?: number;
+    monster?: number;
+    boss?: number;
+};
+
+type RewardTable = QuestObject & {
     empty_weight: number;
     loot_size: number;
     hide_tooltip?: boolean;
@@ -48,17 +57,13 @@ type RewardTable = WithId & {
         item_name?: string;
         color: number;
         glow?: boolean;
-        drops?: {
-            passive?: number;
-            monster?: number;
-            boss?: number;
-        }
+        drops?: EntityWeight;
     };
 
     loot_table_id?: ResourceLocation;
 };
 
-type QuestTask = WithId & ({
+type QuestTask = QuestObject & ({
     type: FtbId<'item'>;
 
     item: Item;
@@ -118,7 +123,7 @@ type QuestTask = WithId & ({
     points?: boolean;
 } | Custom);
 
-type QuestReward = WithId & (Advancement | {
+type QuestReward = QuestObject & (Advancement | {
     type: FtbId<'choice'>;
 } | {
     type: FtbId<'command'>;
@@ -153,18 +158,41 @@ type QuestReward = WithId & (Advancement | {
     xp?: number;
 } | Custom);
 
-type WithId = {
+type QuestObject = {
     id: string;
+    title: string;
+    icon: Item;
+    tags?: string[];
+    custom_id?: string;
+    disable_toast?: boolean;
 }
 
-type Chapter = WithId & {
+type QuestFile = QuestObject & {
+    default_reward_team: boolean;
+    default_consume_items: boolean;
+    default_autoclaim_rewards: 'default' | 'disabled' | 'enabled' | 'no_toast' | 'invisible';
+    default_quest_shape: QuestShape;
+    default_quest_disable_jei: boolean;
+
+    emergency_items?: ItemStack[];
+
+    emergency_items_cooldown: number;
+    drop_loot_crates: boolean;
+    loot_crate_no_drop?: EntityWeight;
+    disable_gui?: boolean;
+    grid_scale?: number;
+    pause_game?: boolean;
+    lock_message?: string;
+}
+
+type Chapter = QuestObject & {
     group: string;
     order_index: number;
     filename: string;
     title: string;
     subtitle?: string[];
     always_invisible?: boolean;
-    default_quest_shape?: string;
+    default_quest_shape?: QuestShape;
     default_hide_dependency_lines?: boolean;
 
     images: {
@@ -181,10 +209,10 @@ type Chapter = WithId & {
         dependency: string;
     }[];
 
-    quests: (WithId & {
+    quests: (QuestObject & {
         x: number;
         y: number;
-        shape?: string;
+        shape?: QuestShape;
         subtitle?: string;
         description?: string[];
         guide_page?: string;
@@ -205,7 +233,7 @@ type Chapter = WithId & {
     quest_links: [];
 };
 
-function toObject<T extends WithId, R>(array: T[], convertor: (value: T) => R): Record<string, R> {
+function toObject<T extends QuestObject, R>(array: T[], convertor: (value: T) => R): Record<string, R> {
     return array.map(value => {
         return {
             id: value.id,
