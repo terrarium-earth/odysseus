@@ -1,0 +1,258 @@
+import {Component} from "./Component";
+import {Json} from "./Json";
+import {RegistryValue, ResourceLocation, TagKey} from "./types";
+
+type NumericRange = number | null | {
+    min?: number;
+    max?: number;
+}
+
+type StateProperties = Record<string, string | {
+    min?: string;
+    max?: string;
+}>;
+
+type LocationPredicate = {
+    position?: {
+        x?: NumericRange;
+        y?: NumericRange;
+        z?: NumericRange;
+    };
+
+    dimension?: ResourceLocation;
+    structure?: ResourceLocation;
+    biome?: ResourceLocation;
+    smokey?: boolean;
+
+    light?: {
+        light: NumericRange;
+    } | null;
+
+    block?: {
+        nbt?: string | null;
+        blocks?: ResourceLocation[];
+        tag?: ResourceLocation;
+        state?: {
+            properties: StateProperties;
+        } | null;
+    } | null;
+
+    fluid?: {
+        fluid?: ResourceLocation;
+        tag?: ResourceLocation;
+        state?: {
+            properties: StateProperties;
+        } | null;
+    } | null;
+} | null;
+
+type EffectsPredicate = Record<ResourceLocation, {
+    amplifier?: NumericRange;
+    duration?: NumericRange;
+    ambient?: boolean;
+    visible?: boolean;
+}> | null;
+
+type EntityFlags = {
+    is_on_fire?: boolean;
+    is_sneaking?: boolean;
+    is_sprinting?: boolean;
+    is_swimming?: boolean;
+    is_baby?: boolean;
+} | null;
+
+type EnchantmentPredicate = {
+    enchantment: ResourceLocation;
+    levels: NumericRange;
+} | null;
+
+type EnchantmentsPredicate = EnchantmentPredicate[] | null;
+
+type ItemPredicate = {
+    count?: NumericRange;
+    durability?: NumericRange;
+    nbt?: string | null;
+    items?: ResourceLocation[];
+    tag?: ResourceLocation;
+    potion?: ResourceLocation;
+    enchantments?: EnchantmentsPredicate;
+    stored_enchantments?: EnchantmentsPredicate;
+} | null;
+
+type EntityPredicate = {
+    type: RegistryValue;
+
+    distance?: {
+        x: NumericRange;
+        y: NumericRange;
+        z: NumericRange;
+        horizontal: NumericRange;
+        absolute: NumericRange;
+    } | null;
+
+    location?: LocationPredicate;
+    stepping_on?: LocationPredicate;
+    effects?: EffectsPredicate;
+    nbt?: string | null;
+    flags?: EntityFlags;
+    equipment?: {
+        head?: ItemPredicate;
+        chest?: ItemPredicate;
+        legs?: ItemPredicate;
+        feet?: ItemPredicate;
+        mainhand?: ItemPredicate;
+        offhand?: ItemPredicate;
+    } | null;
+    type_specific?: {
+        type?: 'any';
+    } | {
+        type: 'lightning';
+        blocks_set_on_fire?: NumericRange;
+        entity_struck?: EntityPredicate;
+    } | {
+        type: 'fishing_hook';
+        in_open_water?: boolean;
+    } | {
+        type: 'player';
+        level?: NumericRange;
+        gamemode?: 'survival' | 'creative' | 'adventure' | 'spectator';
+        stats?: {
+            type: ResourceLocation;
+            stat: ResourceLocation;
+            value: NumericRange;
+        }[];
+        recipes?: Record<ResourceLocation, boolean>;
+        advancements?: Record<ResourceLocation, boolean | Record<string, boolean>>;
+        looking_at?: EntityPredicate;
+    } | {
+        type: 'slime';
+        size?: NumericRange;
+    } | {
+        type: 'cat' | 'frog' | 'villager' | 'painting';
+        variant: ResourceLocation;
+    } | {
+        type: 'axolotl'  | 'boat' | 'fox' | 'mooshroom' | 'rabbit' | 'horse' | 'llama'  | 'parrot' | 'tropical_fish';
+        variant: string;
+    } | null;
+    vehicle?: EntityPredicate;
+    passenger?: EntityPredicate;
+    targeted_entity?: EntityPredicate;
+    team?: string;
+} | null;
+
+export type HeraclesQuestTask = {
+    type: 'heracles:advancement';
+    advancements: ResourceLocation[];
+} | {
+    type: 'heracles:biome';
+    biomes: RegistryValue;
+} | {
+    type: 'heracles:block_interaction';
+    block: RegistryValue;
+    state: StateProperties;
+
+    nbt?: Json;
+} | {
+    type: 'heracles:changed_dimension';
+    from?: ResourceLocation;
+    to?: ResourceLocation;
+} | {
+    type: 'heracles:check';
+    value: string;
+} | {
+    type: 'heracles:composite';
+    amount: number;
+    tasks: Record<string, HeraclesQuestTask>;
+} | {
+    type: 'heracles:dummy';
+    value: string;
+    icon: string;
+    title: string;
+    description: string;
+} | {
+    type: 'heracles:item';
+    item: RegistryValue;
+    nbt?: Json;
+    amount?: number;
+    manual?: boolean;
+} | {
+    type: 'heracles:item_interaction';
+    item: RegistryValue;
+    nbt?: Json;
+} | {
+    type: 'heracles:item_use';
+    item: RegistryValue;
+    nbt?: Json;
+} | {
+    type: 'heracles:kill_entity';
+    entity: {
+        type: ResourceLocation;
+        location?: LocationPredicate;
+        effects?: EffectsPredicate;
+        nbt?: string | null;
+        flags?: EntityFlags;
+        target?: EntityPredicate;
+    };
+    amount?: number;
+} | {
+    type: 'heracles:recipe';
+    recipes: ResourceLocation[];
+} | {
+    type: 'heracles:structure';
+    structures: RegistryValue;
+};
+
+export type HeraclesQuestReward = {
+    type: 'heracles:command';
+    command: string;
+} | {
+    type: 'heracles:item';
+    item: ResourceLocation | {
+        id: ResourceLocation;
+        count?: number;
+        nbt?: Json;
+    };
+} | {
+    type: 'heracles:loottable';
+    loot_table: ResourceLocation;
+} | {
+    type: 'heracles:selectable';
+    amount?: number;
+    rewards: Record<string, HeraclesQuestReward>;
+} | {
+    type: 'heracles:xp';
+    xptype?: 'level' | 'points';
+    amount?: number;
+};
+
+export type HeraclesQuest = {
+    display?: {
+        icon?: {
+            type: 'heracles:item';
+            item: string;
+        };
+
+        iconBackground?: string;
+        title?: Component;
+        subtitle?: Component;
+        description?: string[];
+
+        groups?: Partial<Record<string, {
+            position: {
+                x: number;
+                y: number;
+            };
+        }>>;
+    };
+
+    settings?: {
+        individual_progress?: boolean;
+        hidden?: boolean;
+    };
+
+    dependencies?: string[];
+
+    tasks?: Record<string, HeraclesQuestTask>;
+
+    rewards?: Record<string, HeraclesQuestReward>;
+};
