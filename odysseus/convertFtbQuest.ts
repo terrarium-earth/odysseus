@@ -2,6 +2,7 @@ import parseStringifiedNbt from "./parseStringifiedNbt";
 import {RegistryValue, ResourceLocation} from "./types";
 import {HeraclesQuest, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
 import {JsonObject} from "./Json";
+import {UuidTool} from "uuid-tool";
 
 const enum ObserveType {
     BLOCK,
@@ -189,7 +190,6 @@ type Chapter = QuestObject & {
     group: string;
     order_index: number;
     filename: string;
-    title: string;
     subtitle?: string[];
     always_invisible?: boolean;
     default_quest_shape?: QuestShape;
@@ -267,6 +267,7 @@ export const convertFtbQuest = async (data: Buffer): Promise<Record<string, Hera
         rewards: toObject(quest.rewards, convertReward),
 
         display: {
+            title: quest.title,
             description: quest.description,
 
             subtitle: quest.subtitle ? {
@@ -285,16 +286,26 @@ export const convertFtbQuest = async (data: Buffer): Promise<Record<string, Hera
     }));
 }
 
-// Non-deterministic due to needing random IDs.
-//  TODO Can be made deterministic if the FTB task ID is parsed to a long then converted to a UUID with said long as both the most and least significant bits.
+function parseBigInt(string: string, radix?: number) {
+    if (!radix) {
+        return BigInt(string);
+    }
+
+    const bigintRadix = BigInt(radix);
+    return [...string].reduce((previousValue, digit) => previousValue * bigintRadix + BigInt('0123456789abcdefghijklmnopqrstuvwxyz'.indexOf(digit)), 0n);
+}
+
 function convertTask(task: QuestTask): HeraclesQuestTask {
     switch (task.type) {
         case "ftbquests:checkmark":
-        case "checkmark":
+        case "checkmark": {
+            const id = parseBigInt(task.id, 16);
+
             return {
                 type: 'heracles:check',
-                value: crypto.randomUUID()
+                value: UuidTool.toString([...new Uint8Array(BigUint64Array.from([id, id]).buffer)])
             };
+        }
         case "ftbquests:item":
         case "item":
             return {
