@@ -1,1 +1,1 @@
-export {convertFtbQuest} from './convertFtbQuest';
+export {convertFtbQuests} from './convertFtbQuests';

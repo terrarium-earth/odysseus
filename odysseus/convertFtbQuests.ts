@@ -43,7 +43,7 @@ type EntityWeight = {
     boss?: number;
 };
 
-type RewardTable = QuestObject & {
+type RewardTable = BasicQuestObject & {
     empty_weight: number;
     loot_size: number;
     hide_tooltip?: boolean;
@@ -124,7 +124,7 @@ type QuestTask = QuestObject & ({
     points?: boolean;
 } | Custom);
 
-type QuestReward = QuestObject & (Advancement | {
+type QuestReward = BasicQuestObject & (Advancement | {
     type: FtbId<'choice'>;
 } | {
     type: FtbId<'command'>;
@@ -162,11 +162,17 @@ type QuestReward = QuestObject & (Advancement | {
 type QuestObject = {
     id: string;
     title: string;
-    icon: Item;
+    icon?: Item;
     tags?: string[];
     custom_id?: string;
     disable_toast?: boolean;
-}
+};
+
+type BasicQuestObject = Omit<QuestObject, 'disable_toast'>;
+
+type OrderIndex = {
+    order_index: number;
+};
 
 type QuestFile = QuestObject & {
     default_reward_team: boolean;
@@ -184,7 +190,11 @@ type QuestFile = QuestObject & {
     grid_scale?: number;
     pause_game?: boolean;
     lock_message?: string;
-}
+};
+
+type ChapterGroups = {
+    chapter_groups: QuestObject[];
+};
 
 type Chapter = QuestObject & {
     group: string;
@@ -226,8 +236,9 @@ type Chapter = QuestObject & {
         size?: number;
         optional?: boolean;
         min_width?: number;
-        tasks: QuestTask[];
-        rewards: QuestReward[];
+
+        tasks?: QuestTask[];
+        rewards?: QuestReward[];
     })[];
 
     quest_links: [];
@@ -245,45 +256,62 @@ function toObject<T extends QuestObject, R>(array: T[], convertor: (value: T) =>
     }), {});
 }
 
-export const convertFtbQuest = async (data: Buffer): Promise<Record<string, HeraclesQuest>> => {
-    const parsedResult = parseStringifiedNbt(data.toString());
+function areNumericIds(array?: number[] | string[]): array is number[] {
+    return typeof array?.[0] === 'number';
+}
 
-    if (!parsedResult || typeof parsedResult !== 'object') {
-        throw new Error('Invalid quest file.');
-    }
+export const convertFtbQuests = async (questData: {
+    fileData: Buffer;
+    chapterGroups: Buffer;
+    chapters: Buffer[];
+    rewardTables: Buffer[];
+}): Promise<Record<string, HeraclesQuest>> => {
+    const questFile = parseStringifiedNbt(questData.fileData.toString()) as QuestFile;
+    const groups = toObject((parseStringifiedNbt(questData.chapterGroups.toString()) as ChapterGroups).chapter_groups, group => group);
+    const chapters = questData.chapters.map(buffer => buffer.toString()).map(parseStringifiedNbt) as (Chapter & OrderIndex)[];
+    const rewardTables = questData.rewardTables.map(buffer => buffer.toString()).map(parseStringifiedNbt) as (RewardTable & OrderIndex)[];
 
-    const chapter = parsedResult as Chapter; // Unsafe cast, anything invalid is user error and will likely fail regardless.
+    const outputQuests: Record<string, HeraclesQuest> = {};
 
-    const group = chapter.title;
+    for (const chapter of chapters) {
+        // TODO Find out what to do with the group?
+        const group = chapter.group ? groups[chapter.group] : null;
 
-    return toObject(chapter.quests, quest => ({
-        settings: {
-            hidden: quest.hide
-        },
+        for (const quest of chapter.quests) {
+            outputQuests[quest.id] = {
+                settings: {
+                    hidden: quest.hide
+                },
 
-        // dependencies: quest.dependencies,
+                dependencies: areNumericIds(quest.dependencies) ?
+                    quest.dependencies.map(id => id.toString(16).toUpperCase()) :
+                    quest.dependencies,
 
-        tasks: toObject(quest.tasks, convertTask),
-        rewards: toObject(quest.rewards, convertReward),
+                tasks: toObject(quest.tasks ?? [], convertTask),
+                rewards: toObject(quest.rewards ?? [], reward => convertReward(reward, rewardTables)),
 
-        display: {
-            title: quest.title,
-            description: quest.description,
+                display: {
+                    title: quest.title,
+                    description: quest.description,
 
-            subtitle: quest.subtitle ? {
-                text: quest.subtitle
-            } : undefined,
+                    subtitle: quest.subtitle ? {
+                        text: quest.subtitle
+                    } : undefined,
 
-            groups: {
-                [group]: {
-                    position: {
-                        x: quest.x,
-                        y: quest.y
+                    groups: {
+                        [chapter.title]: {
+                            position: {
+                                x: quest.x,
+                                y: quest.y
+                            }
+                        }
                     }
                 }
-            }
+            };
         }
-    }));
+    }
+
+    return outputQuests;
 }
 
 function parseBigInt(string: string, radix?: number) {
@@ -351,7 +379,7 @@ function convertTask(task: QuestTask): HeraclesQuestTask {
     }
 }
 
-function convertReward(reward: QuestReward): HeraclesQuestReward {
+function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIndex)[]): HeraclesQuestReward {
     switch (reward.type) {
         case "ftbquests:command":
         case "command":
@@ -366,16 +394,32 @@ function convertReward(reward: QuestReward): HeraclesQuestReward {
                 item: reward.item
             }
         case "ftbquests:loot":
-        case "loot":
-            if (reward.table_data && reward.table_data.loot_table_id) {
+        case "loot": {
+            let rewardTable: RewardTable | undefined;
+
+            if ('table' in reward) {
+                rewardTable = rewardTables.find(table => table.order_index === reward.table);
+            } else if ('table_id' in reward) {
+                rewardTable = rewardTables.find(table => table.id === reward.table_id);
+            }
+
+            if (!rewardTable && reward.table_data) {
+                rewardTable = reward.table_data;
+            }
+
+            if (!rewardTable) {
+                throw new Error(`Invalid reward ${reward}`);
+            }
+
+            if (rewardTable.loot_table_id) {
                 return {
                     type: 'heracles:loottable',
-                    loot_table: reward.table_data.loot_table_id
+                    loot_table: rewardTable.loot_table_id
                 };
             } else {
-                // TODO Handle reward table IDs and indices
                 throw new Error(`Don't know how to convert reward ${reward}`);
             }
+        }
         case "ftbquests:xp_levels":
         case "xp_levels":
             return {
