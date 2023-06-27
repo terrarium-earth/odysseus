@@ -2,7 +2,7 @@ import {Json, JsonObject} from "./Json";
 
 export default (text: string) => {
     let currentPosition = 0;
-    let currentCharacter = ' ';
+    let currentCharacter = text.charAt(currentPosition);
 
     const escapes = {
         '"': '"',
@@ -16,7 +16,7 @@ export default (text: string) => {
         t: '\t'
     };
 
-    const allowKeyChar = /[a-zA-Z0-9]/;
+    const allowKeyChar = /[a-zA-Z0-9_]/;
 
     const nextCharacter = (c?: string) => {
         if (c && c !== currentCharacter) {
@@ -162,6 +162,7 @@ export default (text: string) => {
             }
 
             if (currentCharacter === ']') {
+                currentCharacter = nextCharacter(']');
                 return result;
             }
 
@@ -174,7 +175,10 @@ export default (text: string) => {
                     return result;
                 }
 
-                currentCharacter = nextCharacter(',');
+                if (currentCharacter === ',') {
+                    currentCharacter = nextCharacter(',');
+                }
+
                 readWhitespace();
             }
         }
@@ -185,13 +189,30 @@ export default (text: string) => {
     const key = () => {
         let result = '';
 
+        let quoted = false;
+        if (currentCharacter === '"') {
+            quoted = true;
+            currentCharacter = nextCharacter('"');
+        }
+
         if (allowKeyChar.test(currentCharacter)) {
             while (currentCharacter) {
-                if (allowKeyChar.test(currentCharacter)) {
-                    result += currentCharacter;
-                    currentCharacter = nextCharacter();
+                if (quoted) {
+                    if (currentCharacter !== '"') {
+                        result += currentCharacter;
+                        currentCharacter = nextCharacter();
+                    } else {
+                        currentCharacter = nextCharacter('"');
+
+                        return result;
+                    }
                 } else {
-                    return result;
+                    if (allowKeyChar.test(currentCharacter)) {
+                        result += currentCharacter;
+                        currentCharacter = nextCharacter();
+                    } else {
+                        return result;
+                    }
                 }
             }
         }
@@ -223,7 +244,10 @@ export default (text: string) => {
                 return result;
             }
 
-            currentCharacter = nextCharacter(',');
+            if (currentCharacter === ',') {
+                currentCharacter = nextCharacter(',');
+            }
+
             readWhitespace();
         }
 
