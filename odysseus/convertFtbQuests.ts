@@ -1,5 +1,5 @@
 import parseStringifiedNbt from "./parseStringifiedNbt";
-import {RegistryValue, ResourceLocation} from "./types";
+import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
 import {JsonObject} from "./Json";
 import {UuidTool} from "uuid-tool";
@@ -103,12 +103,19 @@ type QuestTask = QuestObject & ({
 
     position?: [x: number, y: number, z: number];
     size?: [width: number, height: number, depth: number];
-} | {
+} | ({
     type: FtbId<'observation'>;
     timer: Long;
-    observe_type: ObserveType;
-    to_observe: string;
+} & ({
+    observe_type: ObserveType.BLOCK | ObserveType.BLOCK_ENTITY_TYPE | ObserveType.ENTITY_TYPE;
+    to_observe: ResourceLocation;
 } | {
+    observe_type: ObserveType.BLOCK_TAG | ObserveType.ENTITY_TYPE_TAG;
+    to_observe: TagKey;
+} | {
+    observe_type: ObserveType.BLOCK_STATE | ObserveType.BLOCK_ENTITY;
+    to_observe: string;
+})) | {
     type: FtbId<'stage'>;
     stage: string;
 } | {
@@ -374,6 +381,58 @@ function convertTask(task: QuestTask): HeraclesQuestTask {
                 type: 'heracles:structure',
                 structures: task.structure
             };
+        case "ftbquests:observation":
+        case "observation": {
+            switch (task.observe_type) {
+                case ObserveType.BLOCK:
+                case ObserveType.BLOCK_ENTITY_TYPE:
+                case ObserveType.BLOCK_TAG:
+                    return {
+                        type: 'heracles:block_interaction',
+                        block: task.to_observe
+                    };
+                case ObserveType.BLOCK_STATE:
+                case ObserveType.BLOCK_ENTITY:
+                    const stateStart = task.to_observe.indexOf('[');
+                    const stateEnd = task.to_observe.indexOf(']');
+
+                    const block = task.to_observe.substring(0, stateStart).trim() as ResourceLocation;
+
+                    const nbtStart = task.to_observe.indexOf('{');
+                    const stateString = task.to_observe.substring(stateStart + 1, stateEnd);
+                    const nbtString = nbtStart >= 0 ? task.to_observe.substring(nbtStart + 1, task.to_observe.lastIndexOf('}')) : null;
+
+                    const state: Record<string, string> = stateString.split(',')
+                        .map(property => property.split('='))
+                        .reduce((existingState, property) => ({
+                            ...existingState,
+                            [property[0]]: property[1]
+                        }), {})
+
+                    if (nbtString) {
+                        return {
+                            type: 'heracles:block_interaction',
+                            block,
+                            state,
+                            nbt: JSON.parse(nbtString) as JsonObject
+                        }
+                    }
+
+                    return {
+                        type: 'heracles:block_interaction',
+                        block,
+                        state
+                    }
+                case ObserveType.ENTITY_TYPE:
+                case ObserveType.ENTITY_TYPE_TAG:
+                    return {
+                        type: 'heracles:entity_interaction',
+                        entity: task.to_observe
+                    }
+            }
+
+            break;
+        }
         default:
             throw new Error(`Don't know how to convert task of type ${task.type}.`);
     }

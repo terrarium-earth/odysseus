@@ -1,5 +1,5 @@
 import {Component} from "./Component";
-import {Json} from "./Json";
+import {Json, JsonObject} from "./Json";
 import {RegistryValue, ResourceLocation, TagKey} from "./types";
 
 type NumericRange = number | null | {
@@ -149,9 +149,9 @@ export type HeraclesQuestTask = {
 } | {
     type: 'heracles:block_interaction';
     block: RegistryValue;
-    state: StateProperties;
+    state?: StateProperties;
 
-    nbt?: Json;
+    nbt?: JsonObject;
 } | {
     type: 'heracles:changed_dimension';
     from?: ResourceLocation;
@@ -170,19 +170,23 @@ export type HeraclesQuestTask = {
     title: string;
     description: string;
 } | {
+    type: 'heracles:entity_interaction';
+    entity: RegistryValue;
+    nbt?: JsonObject;
+} | {
     type: 'heracles:item';
     item: RegistryValue;
-    nbt?: Json;
+    nbt?: JsonObject;
     amount?: number;
     manual?: boolean;
 } | {
     type: 'heracles:item_interaction';
     item: RegistryValue;
-    nbt?: Json;
+    nbt?: JsonObject;
 } | {
     type: 'heracles:item_use';
     item: RegistryValue;
-    nbt?: Json;
+    nbt?: JsonObject;
 } | {
     type: 'heracles:kill_entity';
     entity: {
@@ -200,6 +204,10 @@ export type HeraclesQuestTask = {
 } | {
     type: 'heracles:structure';
     structures: RegistryValue;
+} | {
+    type: 'heracles:xp';
+    amount?: number;
+    xpType?: 'level' | 'points';
 };
 
 export type HeraclesQuestReward = {
@@ -210,7 +218,7 @@ export type HeraclesQuestReward = {
     item: ResourceLocation | {
         id: ResourceLocation;
         count?: number;
-        nbt?: Json;
+        nbt?: JsonObject;
     };
 } | {
     type: 'heracles:loottable';
