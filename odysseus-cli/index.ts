@@ -1,22 +1,34 @@
 import process from 'process';
 import fs from "fs";
 import {promisify} from "util";
-import {convertFtbQuests} from "odysseus";
-import {HeraclesQuest} from "odysseus/HeraclesQuest";
+import {ConversionResult, convertFtbQuests, HeraclesQuest} from "odysseus";
 
-const args = process.argv.splice(2);
-
-if (args.length % 2 !== 0) {
-    throw new Error('Invalid argument length');
-}
+const args = process.argv.slice(2);
 
 let type: 'ftb' | 'hqm' | null = null;
 let inputPath: string | null = null;
 let outputPath: string | null = null;
 
-for (let i = 0; i < args.length; i += 2) {
-    const argumentType = args[i].toLowerCase();
-    const argumentValue = args[i + 1];
+for (let i = 0; i < args.length; ++i) {
+    const argument = args[i];
+    const equals = argument.indexOf('=');
+
+    let argumentType: string;
+    let argumentValue: string;
+
+    if (equals >= 0) {
+        argumentType = argument.substring(0, equals).toLowerCase();
+        argumentValue = argument.substring(equals + 1);
+    } else {
+        argumentType = args[i].toLowerCase();
+        const nextArgument = args[(i++) + 1];
+
+        if (!nextArgument) {
+            throw new Error('Invalid argument list, no value provided for ' + argumentType);
+        }
+
+        argumentValue = nextArgument;
+    }
 
     if (argumentType === '--type' || argumentType === '-t') {
         const typeArgument = argumentType.toLowerCase();
@@ -41,6 +53,11 @@ if (!inputPath) {
     throw new Error('No input specified, use --input or -i');
 }
 
+const writeFile = promisify(fs.writeFile);
+const readFile = promisify(fs.readFile);
+const readDir = promisify(fs.readdir);
+const exists = promisify(fs.exists);
+
 if (!type) {
     if (fs.statSync(inputPath).isDirectory()) {
         type = 'ftb';
@@ -51,20 +68,23 @@ if (!type) {
     }
 }
 
-if (!outputPath) {
-    outputPath = './output';
-}
+const output = outputPath ?? './output';
 
-const readFile = promisify(fs.readFile);
+let conversionResult: Promise<ConversionResult>;
 
-let conversionResult: Promise<Record<string, HeraclesQuest>>;
+const readDirSafely = (directory: string) => exists(directory).then(exists => exists ?
+    readDir(directory).then(files =>
+        files.map(file => `${directory}/${file}`)
+    ) :
+    []
+);
 
 if (type === 'ftb') {
     conversionResult = Promise.all([
-        readFile(inputPath + '/data.snbt'),
-        readFile(inputPath + '/chapter_groups.snbt'),
-        promisify(fs.readdir)(inputPath + '/chapters').then(chapterFiles => Promise.all(chapterFiles.map(file => readFile(file)))),
-        promisify(fs.readdir)(inputPath + '/reward_tables').then(chapterFiles => Promise.all(chapterFiles.map(file => readFile(file))))
+        readFile(`${inputPath}/data.snbt`),
+        readFile(`${inputPath}/chapter_groups.snbt`),
+        readDirSafely(`${inputPath}/chapters`).then(chapterFiles => Promise.all(chapterFiles.map(file => readFile(file)))),
+        readDirSafely(`${inputPath}/reward_tables`).then(chapterFiles => Promise.all(chapterFiles.map(file => readFile(file))))
     ]).then(([fileData, chapterGroups, chapters, rewardTables]) => convertFtbQuests({
         fileData,
         chapterGroups,
@@ -75,9 +95,14 @@ if (type === 'ftb') {
     throw new Error('HQM is not yet supported!');
 }
 
-conversionResult.then(quests =>
-    Promise.all(Object.entries(quests).map(([id, quest]) =>
-            promisify(fs.writeFile)(outputPath + '/' + id + '.json', JSON.stringify(quest, null, 2))
-        )
-    )
-).catch(console.error);
+conversionResult.then(result => {
+    const write = () =>
+        Promise.all([
+            ...Object.entries(result.quests).map(([id, quest]) =>
+                writeFile(`${output}/${id}.json`, JSON.stringify(quest, null, 2))),
+
+            writeFile(`${output}/groups.txt`, result.groups.join('\n'))
+        ]);
+
+    return exists(output).then(exists => exists ? write() : promisify(fs.mkdir)(output).then(write))
+}).catch(console.error);

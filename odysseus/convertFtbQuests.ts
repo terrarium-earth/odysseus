@@ -3,6 +3,7 @@ import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
 import {JsonObject} from "./Json";
 import {UuidTool} from "uuid-tool";
+import {ConversionResult} from "./ConversionResult";
 
 const enum ObserveType {
     BLOCK,
@@ -144,11 +145,11 @@ type QuestReward = BasicQuestObject & (Advancement | {
     random_bonus?: number;
     only_one: boolean;
 } | {
-    type: FtbId<'loot'>;
+    type: FtbId<'loot'> | FtbId<'random'>;
     table_id: string;
     table_data?: RewardTable;
 } | {
-    type: FtbId<'loot'>;
+    type: FtbId<'loot'> | FtbId<'random'>;
     table: number;
     table_data?: RewardTable;
 } | {
@@ -182,16 +183,16 @@ type OrderIndex = {
 };
 
 type QuestFile = QuestObject & {
-    default_reward_team: boolean;
-    default_consume_items: boolean;
-    default_autoclaim_rewards: 'default' | 'disabled' | 'enabled' | 'no_toast' | 'invisible';
-    default_quest_shape: QuestShape;
-    default_quest_disable_jei: boolean;
+    default_reward_team?: boolean;
+    default_consume_items?: boolean;
+    default_autoclaim_rewards?: 'default' | 'disabled' | 'enabled' | 'no_toast' | 'invisible';
+    default_quest_shape?: QuestShape;
+    default_quest_disable_jei?: boolean;
 
     emergency_items?: ItemStack[];
 
-    emergency_items_cooldown: number;
-    drop_loot_crates: boolean;
+    emergency_items_cooldown?: number;
+    drop_loot_crates?: boolean;
     loot_crate_no_drop?: EntityWeight;
     disable_gui?: boolean;
     grid_scale?: number;
@@ -251,13 +252,19 @@ type Chapter = QuestObject & {
     quest_links: [];
 };
 
-function toObject<T extends QuestObject, R>(array: T[], convertor: (value: T) => R): Record<string, R> {
+function toObject<T extends QuestObject, R extends {}>(array: T[], convertor: (value: T) => R | null): Record<string, R> {
     return array.map(value => {
+        const data = convertor(value);
+
+        if (!data) {
+            return null;
+        }
+
         return {
             id: value.id,
-            data: convertor(value)
-        }
-    }).reduce((existing, current) => ({
+            data
+        };
+    }).filter((value): value is { id: string; data: R; } => Boolean(value)).reduce((existing, current) => ({
         ...existing,
         [current.id]: current.data
     }), {});
@@ -267,11 +274,6 @@ function areNumericIds(array?: number[] | string[]): array is number[] {
     return typeof array?.[0] === 'number';
 }
 
-type ConversionResult = {
-    quests: Record<string, HeraclesQuest>;
-    groups: string[];
-};
-
 export const convertFtbQuests = async (questData: {
     fileData: Buffer;
     chapterGroups: Buffer;
@@ -280,7 +282,7 @@ export const convertFtbQuests = async (questData: {
 }): Promise<ConversionResult> => {
     // TODO Find some use for the quest data file
     // const questFile = parseStringifiedNbt(questData.fileData.toString()) as QuestFile;
-    // const groups = (parseStringifiedNbt(questData.chapterGroups.toString()) as ChapterGroups).chapter_groups;
+    const groups = (parseStringifiedNbt(questData.chapterGroups.toString()) as ChapterGroups).chapter_groups;
 
     const chapters = (questData.chapters.map(buffer => buffer.toString()).map(parseStringifiedNbt) as (Chapter & OrderIndex)[])
         .sort((a, b) => a.order_index - b.order_index);
@@ -291,18 +293,20 @@ export const convertFtbQuests = async (questData: {
     const outputQuests: Record<string, HeraclesQuest> = {};
     const outputGroups: string[] = [];
 
-    const groupedChapters = chapters.reduce<Record<string, (Chapter & OrderIndex)[]>>((grouped, chapter) => {
+    const groupedChapters = chapters.reduce<Record<string, Chapter[]>>((grouped, chapter) => {
         const key = chapter.group ?? '';
 
         return {
+            ...grouped,
             [key]: [...(grouped[key] ?? []), chapter]
         };
     }, {});
 
-    for (const group of Object.values(groupedChapters)) {
-        for (const chapter of group) {
+    for (const group of [...groups, null]) {
+        for (const chapter of groupedChapters[group?.id ?? ''] ?? []) {
+            outputGroups.push(chapter.title);
+
             for (const quest of chapter.quests) {
-                outputGroups.push(quest.title);
 
                 outputQuests[quest.id] = {
                     settings: {
@@ -461,7 +465,7 @@ function convertTask(task: QuestTask): HeraclesQuestTask {
     }
 }
 
-function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIndex)[]): HeraclesQuestReward {
+function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIndex)[]): HeraclesQuestReward | null {
     switch (reward.type) {
         case "ftbquests:command":
         case "command":
@@ -475,6 +479,8 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
                 type: 'heracles:item',
                 item: reward.item
             }
+        case 'ftbquests:random':
+        case 'random':
         case "ftbquests:loot":
         case "loot": {
             let rewardTable: RewardTable | undefined;
@@ -490,7 +496,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
             }
 
             if (!rewardTable) {
-                throw new Error(`Invalid reward ${reward}`);
+                return null;
             }
 
             if (rewardTable.loot_table_id) {

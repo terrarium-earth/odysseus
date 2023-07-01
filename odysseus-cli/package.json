@@ -1,17 +1,18 @@
 {
-  "name": "odysseus",
+  "name": "odysseus-cli",
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node .",
+    "dev": "npm install && npm run build && npm run start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "odysseus": "../odysseus"
+    "odysseus": "file:../odysseus"
   }
 }
