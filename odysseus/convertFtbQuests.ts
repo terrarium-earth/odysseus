@@ -267,58 +267,81 @@ function areNumericIds(array?: number[] | string[]): array is number[] {
     return typeof array?.[0] === 'number';
 }
 
+type ConversionResult = {
+    quests: Record<string, HeraclesQuest>;
+    groups: string[];
+};
+
 export const convertFtbQuests = async (questData: {
     fileData: Buffer;
     chapterGroups: Buffer;
     chapters: Buffer[];
     rewardTables: Buffer[];
-}): Promise<Record<string, HeraclesQuest>> => {
-    const questFile = parseStringifiedNbt(questData.fileData.toString()) as QuestFile;
-    const groups = toObject((parseStringifiedNbt(questData.chapterGroups.toString()) as ChapterGroups).chapter_groups, group => group);
-    const chapters = questData.chapters.map(buffer => buffer.toString()).map(parseStringifiedNbt) as (Chapter & OrderIndex)[];
-    const rewardTables = questData.rewardTables.map(buffer => buffer.toString()).map(parseStringifiedNbt) as (RewardTable & OrderIndex)[];
+}): Promise<ConversionResult> => {
+    // TODO Find some use for the quest data file
+    // const questFile = parseStringifiedNbt(questData.fileData.toString()) as QuestFile;
+    // const groups = (parseStringifiedNbt(questData.chapterGroups.toString()) as ChapterGroups).chapter_groups;
+
+    const chapters = (questData.chapters.map(buffer => buffer.toString()).map(parseStringifiedNbt) as (Chapter & OrderIndex)[])
+        .sort((a, b) => a.order_index - b.order_index);
+
+    const rewardTables = (questData.rewardTables.map(buffer => buffer.toString()).map(parseStringifiedNbt) as (RewardTable & OrderIndex)[])
+        .sort((a, b) => a.order_index - b.order_index);
 
     const outputQuests: Record<string, HeraclesQuest> = {};
+    const outputGroups: string[] = [];
 
-    for (const chapter of chapters) {
-        // TODO Find out what to do with the group?
-        const group = chapter.group ? groups[chapter.group] : null;
+    const groupedChapters = chapters.reduce<Record<string, (Chapter & OrderIndex)[]>>((grouped, chapter) => {
+        const key = chapter.group ?? '';
 
-        for (const quest of chapter.quests) {
-            outputQuests[quest.id] = {
-                settings: {
-                    hidden: quest.hide
-                },
+        return {
+            [key]: [...(grouped[key] ?? []), chapter]
+        };
+    }, {});
 
-                dependencies: areNumericIds(quest.dependencies) ?
-                    quest.dependencies.map(id => id.toString(16).toUpperCase()) :
-                    quest.dependencies,
+    for (const group of Object.values(groupedChapters)) {
+        for (const chapter of group) {
+            for (const quest of chapter.quests) {
+                outputGroups.push(quest.title);
 
-                tasks: toObject(quest.tasks ?? [], convertTask),
-                rewards: toObject(quest.rewards ?? [], reward => convertReward(reward, rewardTables)),
+                outputQuests[quest.id] = {
+                    settings: {
+                        hidden: quest.hide
+                    },
 
-                display: {
-                    title: quest.title,
-                    description: quest.description,
+                    dependencies: areNumericIds(quest.dependencies) ?
+                        quest.dependencies.map(id => id.toString(16).toUpperCase()) :
+                        quest.dependencies,
 
-                    subtitle: quest.subtitle ? {
-                        text: quest.subtitle
-                    } : undefined,
+                    tasks: toObject(quest.tasks ?? [], convertTask),
+                    rewards: toObject(quest.rewards ?? [], reward => convertReward(reward, rewardTables)),
 
-                    groups: {
-                        [chapter.title]: {
-                            position: {
-                                x: quest.x,
-                                y: quest.y
+                    display: {
+                        title: quest.title,
+                        description: quest.description,
+
+                        subtitle: quest.subtitle ? {
+                            text: quest.subtitle
+                        } : undefined,
+
+                        groups: {
+                            [chapter.title]: {
+                                position: {
+                                    x: quest.x,
+                                    y: quest.y
+                                }
                             }
                         }
                     }
-                }
-            };
+                };
+            }
         }
     }
 
-    return outputQuests;
+    return {
+        quests: outputQuests,
+        groups: outputGroups
+    };
 }
 
 function parseBigInt(string: string, radix?: number) {
