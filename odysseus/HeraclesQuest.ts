@@ -178,7 +178,7 @@ export type HeraclesQuestTask = {
     item: RegistryValue;
     nbt?: JsonObject;
     amount?: number;
-    manual?: boolean;
+    collection_type?: 'automatic' | 'manual' | 'consume';
 } | {
     type: 'heracles:item_interaction';
     item: RegistryValue;
