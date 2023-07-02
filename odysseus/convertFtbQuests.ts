@@ -407,6 +407,13 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     type: task.entity
                 }
             };
+        case "ftbquests:stat":
+        case "stat":
+            return {
+                type: 'heracles:stat',
+                stat: task.stat,
+                target: task.value
+            }
         case "ftbquests:structure":
         case "structure":
             return {
