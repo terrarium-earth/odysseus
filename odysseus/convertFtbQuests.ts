@@ -275,8 +275,7 @@ function areNumericIds(array?: number[] | string[]): array is number[] {
 }
 
 export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
-    // TODO Find some use for the quest data file
-    // const questFile = parseStringifiedNbt(await fileSystem.readFile('data.snbt')) as QuestFile;
+    const questFile = parseStringifiedNbt(await input.readFile('data.snbt')) as QuestFile;
     const groups = (parseStringifiedNbt(await input.readFile('chapter_groups.snbt')) as ChapterGroups).chapter_groups;
 
     const chapters = ((await input.readDirectory('chapters')).map(parseStringifiedNbt) as (Chapter & OrderIndex)[])
@@ -312,7 +311,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                         quest.dependencies.map(id => id.toString(16).toUpperCase()) :
                         quest.dependencies,
 
-                    tasks: toObject(quest.tasks ?? [], convertTask),
+                    tasks: toObject(quest.tasks ?? [], task => convertTask(task, questFile)),
                     rewards: toObject(quest.rewards ?? [], reward => convertReward(reward, rewardTables)),
 
                     display: {
@@ -354,7 +353,7 @@ function parseBigInt(string: string, radix?: number) {
     return [...string].reduce((previousValue, digit) => previousValue * bigintRadix + BigInt('0123456789abcdefghijklmnopqrstuvwxyz'.indexOf(digit)), 0n);
 }
 
-function convertTask(task: QuestTask): HeraclesQuestTask {
+function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
     switch (task.type) {
         case "ftbquests:checkmark":
         case "checkmark": {
@@ -367,10 +366,19 @@ function convertTask(task: QuestTask): HeraclesQuestTask {
         }
         case "ftbquests:item":
         case "item":
+            let collectionType: 'manual' | 'consume' | undefined = undefined;
+
+            if (task.consume_items === true || questFile.default_consume_items === true) {
+                collectionType = 'consume'
+            } else if (task.consume_items === false || questFile.default_consume_items === false) {
+                collectionType = 'manual'
+            }
+
             return {
                 type: 'heracles:item',
                 amount: task.count,
-                item: typeof task.item === 'object' ? task.item.id : task.item
+                item: typeof task.item === 'object' ? task.item.id : task.item,
+                collection_type: collectionType
             };
         case "ftbquests:advancement":
         case "advancement":
