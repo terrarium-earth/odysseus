@@ -1,3 +1,3 @@
-export {convertFtbQuests} from './convertFtbQuests';
-export {HeraclesQuest} from './HeraclesQuest';
-export {ConversionResult} from './ConversionResult';
+export * from './convertFtbQuests';
+export * from './HeraclesQuest';
+export * from './QuestFileSystem';
