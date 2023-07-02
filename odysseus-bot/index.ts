@@ -28,7 +28,7 @@ if (!publicKey) {
 }
 
 if (!discordToken) {
-    throw new Error('CLIENT_PUBLIC_KEY was not defined.');
+    throw new Error('DISCORD_TOKEN was not defined.');
 }
 
 const app = express();
