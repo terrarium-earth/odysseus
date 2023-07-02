@@ -3,7 +3,7 @@ import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
 import {JsonObject} from "./Json";
 import {UuidTool} from "uuid-tool";
-import {ConversionResult} from "./ConversionResult";
+import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
 
 const enum ObserveType {
     BLOCK,
@@ -274,20 +274,15 @@ function areNumericIds(array?: number[] | string[]): array is number[] {
     return typeof array?.[0] === 'number';
 }
 
-export const convertFtbQuests = async (questData: {
-    fileData: Buffer;
-    chapterGroups: Buffer;
-    chapters: Buffer[];
-    rewardTables: Buffer[];
-}): Promise<ConversionResult> => {
+export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
     // TODO Find some use for the quest data file
-    // const questFile = parseStringifiedNbt(questData.fileData.toString()) as QuestFile;
-    const groups = (parseStringifiedNbt(questData.chapterGroups.toString()) as ChapterGroups).chapter_groups;
+    // const questFile = parseStringifiedNbt(await fileSystem.readFile('data.snbt')) as QuestFile;
+    const groups = (parseStringifiedNbt(await input.readFile('chapter_groups.snbt')) as ChapterGroups).chapter_groups;
 
-    const chapters = (questData.chapters.map(buffer => buffer.toString()).map(parseStringifiedNbt) as (Chapter & OrderIndex)[])
+    const chapters = ((await input.readDirectory('chapters')).map(parseStringifiedNbt) as (Chapter & OrderIndex)[])
         .sort((a, b) => a.order_index - b.order_index);
 
-    const rewardTables = (questData.rewardTables.map(buffer => buffer.toString()).map(parseStringifiedNbt) as (RewardTable & OrderIndex)[])
+    const rewardTables = ((await input.readDirectory('reward_tables')).map(parseStringifiedNbt) as (RewardTable & OrderIndex)[])
         .sort((a, b) => a.order_index - b.order_index);
 
     const outputQuests: Record<string, HeraclesQuest> = {};
@@ -342,10 +337,12 @@ export const convertFtbQuests = async (questData: {
         }
     }
 
-    return {
-        quests: outputQuests,
-        groups: outputGroups
-    };
+    await Promise.all([
+        ...Object.entries(outputQuests).map(([id, quest]) =>
+            output.writeFile(`${id}.json`, JSON.stringify(quest, null, 2))),
+
+        output.writeFile(`groups.txt`, outputGroups.join('\n'))
+    ]);
 }
 
 function parseBigInt(string: string, radix?: number) {
