@@ -199,6 +199,12 @@ export type HeraclesQuestTask = {
     };
     amount?: number;
 } | {
+    type: 'heracles:location';
+    icon?: ResourceLocation;
+    title: Component;
+    description: Component;
+    predicate: LocationPredicate;
+} | {
     type: 'heracles:recipe';
     recipes: ResourceLocation[];
 } | {

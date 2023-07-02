@@ -407,6 +407,38 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     type: task.entity
                 }
             };
+        case "ftbquests:location":
+        case "location":
+            const convertCoordinate = (index: number) => {
+                const base = task.position?.[index];
+                const size = task.size?.[index];
+
+                if (base && size) {
+                    return {
+                        min: base - size / 2,
+                        max: base + size / 2
+                    };
+                }
+
+                return base;
+            }
+
+            return {
+                type: 'heracles:location',
+                title: {
+                    text: task.title
+                },
+                description: {
+                    text: ''
+                },
+                predicate: {
+                    position: {
+                        x: convertCoordinate(0),
+                        y: convertCoordinate(1),
+                        z: convertCoordinate(2)
+                    }
+                }
+            }
         case "ftbquests:stat":
         case "stat":
             return {
