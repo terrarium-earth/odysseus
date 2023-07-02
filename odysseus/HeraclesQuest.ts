@@ -202,6 +202,10 @@ export type HeraclesQuestTask = {
     type: 'heracles:recipe';
     recipes: ResourceLocation[];
 } | {
+    type: 'heracles:stat';
+    stat: ResourceLocation;
+    target: number;
+} | {
     type: 'heracles:structure';
     structures: RegistryValue;
 } | {
