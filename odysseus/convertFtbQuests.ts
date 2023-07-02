@@ -252,6 +252,10 @@ type Chapter = QuestObject & {
     quest_links: [];
 };
 
+function convertIcon(icon: ResourceLocation | ItemStack) {
+    return typeof icon === 'object' ? icon.id : icon;
+}
+
 function toObject<T extends QuestObject, R extends {}>(array: T[], convertor: (value: T) => R | null): Record<string, R> {
     return array.map(value => {
         const data = convertor(value);
@@ -301,7 +305,6 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
             outputGroups.push(chapter.title);
 
             for (const quest of chapter.quests) {
-
                 outputQuests[quest.id] = {
                     settings: {
                         hidden: quest.hide
@@ -317,6 +320,13 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                     display: {
                         title: quest.title,
                         description: quest.description,
+
+                        icon: quest.icon ? {
+                            type: 'heracles:item',
+                            item: convertIcon(quest.icon)
+                        } : undefined,
+
+                        icon_background: (quest.shape ?? chapter.default_quest_shape ?? questFile.default_quest_shape) === 'circle' ? 'heracles:textures/gui/quest_backgrounds/circles.png' : undefined,
 
                         subtitle: quest.subtitle ? {
                             text: quest.subtitle
@@ -425,12 +435,17 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
 
             return {
                 type: 'heracles:location',
+
+                icon: task.icon ? convertIcon(task.icon) : undefined,
+
                 title: {
                     text: task.title
                 },
+
                 description: {
                     text: ''
                 },
+
                 predicate: {
                     position: {
                         x: convertCoordinate(0),

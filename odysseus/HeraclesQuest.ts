@@ -250,7 +250,7 @@ export type HeraclesQuest = {
             item: string;
         };
 
-        iconBackground?: string;
+        icon_background?: 'heracles:textures/gui/quest_backgrounds/default.png' | 'heracles:textures/gui/quest_backgrounds/circles.png';
         title?: Component;
         subtitle?: Component;
         description?: string[];
