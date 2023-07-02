@@ -278,6 +278,10 @@ function areNumericIds(array?: number[] | string[]): array is number[] {
     return typeof array?.[0] === 'number';
 }
 
+function floatCoordinateToInt(value: number) {
+    return Math.round(value * 2);
+}
+
 export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
     const questFile = parseStringifiedNbt(await input.readFile('data.snbt')) as QuestFile;
     const groups = (parseStringifiedNbt(await input.readFile('chapter_groups.snbt')) as ChapterGroups).chapter_groups;
@@ -335,8 +339,8 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                         groups: {
                             [chapter.title]: {
                                 position: {
-                                    x: quest.x,
-                                    y: quest.y
+                                    x: floatCoordinateToInt(quest.x),
+                                    y: floatCoordinateToInt(quest.y)
                                 }
                             }
                         }
