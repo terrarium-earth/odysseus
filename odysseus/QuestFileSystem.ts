@@ -15,8 +15,8 @@ export type QuestInputFileSystem = {
 export type QuestOutputFileSystem = {
     /**
      * Write a file in the root of this file system.
-     * @param name The file name
+     * @param path The file path
      * @param data The file content
      */
-    writeFile(name: string, data: string): Promise<void>;
+    writeFile(path: string, data: string): Promise<void>;
 };

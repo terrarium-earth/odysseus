@@ -292,7 +292,6 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
     const rewardTables = ((await input.readDirectory('reward_tables')).map(parseStringifiedNbt) as (RewardTable & OrderIndex)[])
         .sort((a, b) => a.order_index - b.order_index);
 
-    const outputQuests: Record<string, HeraclesQuest> = {};
     const outputGroups: string[] = [];
 
     const groupedChapters = chapters.reduce<Record<string, Chapter[]>>((grouped, chapter) => {
@@ -304,12 +303,14 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
         };
     }, {});
 
+    const fileWrites: Promise<void>[] = [];
+
     for (const group of [...groups, null]) {
         for (const chapter of groupedChapters[group?.id ?? ''] ?? []) {
             outputGroups.push(chapter.title);
 
             for (const quest of chapter.quests) {
-                outputQuests[quest.id] = {
+                const heraclesQuest: HeraclesQuest = {
                     settings: {
                         hidden: quest.hide
                     },
@@ -338,22 +339,25 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
 
                         groups: {
                             [chapter.title]: {
-                                position: {
-                                    x: floatCoordinateToInt(quest.x),
-                                    y: floatCoordinateToInt(quest.y)
-                                }
+                                position: [
+                                    floatCoordinateToInt(quest.x),
+                                    floatCoordinateToInt(quest.y)
+                                ]
                             }
                         }
                     }
                 };
+
+                const groupPart = group?.title ? `${group.title}/` : '';
+                const chapterPart = chapter.title.replaceAll(/[^a-z0-9]/g, '').toLowerCase();
+
+                fileWrites.push(output.writeFile(`${groupPart}${chapterPart.length ? chapterPart : chapter.title}/${quest.id}.json`, JSON.stringify(heraclesQuest, null, 2)));
             }
         }
     }
 
     await Promise.all([
-        ...Object.entries(outputQuests).map(([id, quest]) =>
-            output.writeFile(`${id}.json`, JSON.stringify(quest, null, 2))),
-
+        ...fileWrites,
         output.writeFile(`groups.txt`, outputGroups.join('\n'))
     ]);
 }

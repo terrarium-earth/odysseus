@@ -256,10 +256,7 @@ export type HeraclesQuest = {
         description?: string[];
 
         groups?: Partial<Record<string, {
-            position: {
-                x: number;
-                y: number;
-            };
+            position: [x: number, y: number];
         }>>;
     };
 
