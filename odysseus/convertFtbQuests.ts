@@ -349,7 +349,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 };
 
                 const groupPart = group?.title ? `${group.title}/` : '';
-                const chapterPart = chapter.title.replaceAll(/[^a-z0-9]/g, '').toLowerCase();
+                const chapterPart = chapter.title.toLowerCase().replaceAll(/[^a-z0-9]/g, '');
 
                 fileWrites.push(output.writeFile(`${groupPart}${chapterPart.length ? chapterPart : chapter.title}/${quest.id}.json`, JSON.stringify(heraclesQuest, null, 2)));
             }
