@@ -283,14 +283,28 @@ function floatCoordinateToInt(value: number) {
 }
 
 export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
-    const questFile = parseStringifiedNbt(await input.readFile('data.snbt')) as QuestFile;
-    const groups = (parseStringifiedNbt(await input.readFile('chapter_groups.snbt')) as ChapterGroups).chapter_groups;
+    const readSNbtFile = async (name: string) =>
+        parseStringifiedNbt(await input.readFile(name), name);
 
-    const chapters = ((await input.readDirectory('chapters')).map(parseStringifiedNbt) as (Chapter & OrderIndex)[])
-        .sort((a, b) => a.order_index - b.order_index);
+    const readDirectory = async (directory: string) =>
+        (await input.readDirectory(directory)).map(([data, name]) =>
+            parseStringifiedNbt(data, `${directory}/${name}`)
+        );
 
-    const rewardTables = ((await input.readDirectory('reward_tables')).map(parseStringifiedNbt) as (RewardTable & OrderIndex)[])
-        .sort((a, b) => a.order_index - b.order_index);
+    const sortOrdered = <T extends OrderIndex>(entries: T[]) =>
+        entries.sort((a, b) => a.order_index - b.order_index);
+
+    const [
+        questFile,
+        groups,
+        chapters,
+        rewardTables
+    ] = await Promise.all([
+        readSNbtFile('data.snbt').then(data => data as QuestFile),
+        readSNbtFile('chapter_groups.snbt').then(groups => (groups as ChapterGroups).chapter_groups),
+        readDirectory('chapters').then(chapters => sortOrdered(chapters as (Chapter & OrderIndex)[])),
+        readDirectory('reward_tables').then(tables => sortOrdered(tables as (RewardTable & OrderIndex)[]))
+    ]);
 
     const outputGroups: string[] = [];
 

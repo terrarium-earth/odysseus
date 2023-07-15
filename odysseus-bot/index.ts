@@ -108,16 +108,16 @@ async function handleInteraction(interaction: APIPingInteraction | APIDMInteract
             return file.async('text');
         },
 
-        readDirectory(name: string): Promise<string[]> {
+        readDirectory(name: string) {
             const folder = inputZip.folder(name);
 
             if (!folder) {
                 throw new Error(`Directory not found: ${name}`);
             }
 
-            const fileContents: Promise<string>[] = [];
+            const fileContents: Promise<[data: string, name: string]>[] = [];
 
-            folder.forEach((_, file) => fileContents.push(file.async('text')));
+            folder.forEach((name, file) => fileContents.push(file.async('text').then(data => [data, name])));
 
             return Promise.all(fileContents);
         }

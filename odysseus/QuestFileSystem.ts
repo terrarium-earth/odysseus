@@ -1,9 +1,9 @@
 export type QuestInputFileSystem = {
     /**
-     * Returns an array of file contents, assumes every file is UTF-8
+     * Returns an array of tuples including file names and contents, assumes every file is UTF-8
      * @param name The name of the directory in this file system
      */
-    readDirectory(name: string): Promise<string[]>;
+    readDirectory(name: string): Promise<[data: string, name: string][]>;
 
     /**
      * Returns the specified file's content, assumes file is UTF-8

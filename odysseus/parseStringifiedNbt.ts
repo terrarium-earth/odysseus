@@ -1,6 +1,6 @@
 import {Json, JsonObject} from "./Json";
 
-export default (text: string) => {
+export default (text: string, fileName: string) => {
     let currentPosition = 0;
     let currentCharacter = text.charAt(currentPosition);
 
@@ -20,7 +20,7 @@ export default (text: string) => {
 
     const nextCharacter = (c?: string) => {
         if (c && c !== currentCharacter) {
-            throw new SyntaxError(`Expected '${c}' instead of '${currentCharacter}' at ${currentPosition}`);
+            throw new SyntaxError(`Error parsing ${fileName}: Expected '${c}' instead of '${currentCharacter}' at ${currentPosition}`);
         }
 
         currentPosition += 1;
@@ -103,7 +103,7 @@ export default (text: string) => {
                             let hex = parseInt(currentCharacter = nextCharacter(), 16);
 
                             if (!isFinite(hex)) {
-                                throw new SyntaxError(`Bad unicode escape at ${currentPosition}`);
+                                throw new SyntaxError(`Error parsing ${fileName}: Bad unicode escape at ${currentPosition}`);
                             }
 
                             characterCode = characterCode * 16 + hex;
@@ -123,7 +123,7 @@ export default (text: string) => {
             }
         }
 
-        throw new SyntaxError(`Bad string at ${currentPosition}`);
+        throw new SyntaxError(`Error parsing ${fileName}: Bad string at ${currentPosition}`);
     };
 
     const readWhitespace = () => {
@@ -145,7 +145,7 @@ export default (text: string) => {
                 return null;
         }
 
-        throw new SyntaxError(`Unexpected '${currentCharacter}' at ${currentPosition}`);
+        throw new SyntaxError(`Error parsing ${fileName}: Unexpected '${currentCharacter}' at ${currentPosition}`);
     };
 
     const array = () => {
@@ -183,7 +183,7 @@ export default (text: string) => {
             }
         }
 
-        throw new SyntaxError(`Bad array at ${currentPosition}`);
+        throw new SyntaxError(`Error parsing ${fileName}: Bad array at ${currentPosition}`);
     };
 
     const key = () => {
@@ -217,7 +217,7 @@ export default (text: string) => {
             }
         }
 
-        throw new SyntaxError(`Bad key at ${currentPosition}`);
+        throw new SyntaxError(`Error parsing ${fileName}: Bad key at ${currentPosition}`);
     };
 
     const object = () => {
@@ -251,7 +251,7 @@ export default (text: string) => {
             readWhitespace();
         }
 
-        throw new SyntaxError(`EOF at ${currentPosition}`);
+        throw new SyntaxError(`Error parsing ${fileName}: EOF at ${currentPosition}`);
     }
 
     const value = (): Json => {
