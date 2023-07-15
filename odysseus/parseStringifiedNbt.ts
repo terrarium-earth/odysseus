@@ -21,8 +21,6 @@ export default (text: string, fileName: string) => {
         t: '\t'
     };
 
-    const allowKeyChar = /[a-zA-Z0-9_]/;
-
     const nextCharacter = (c?: string) => {
         if (c && c !== currentCharacter) {
             throw createError(`Expected '${c}' instead of '${currentCharacter}'`);
@@ -35,7 +33,7 @@ export default (text: string, fileName: string) => {
             ++currentColumn;
         }
 
-        return text.charAt(currentPosition++);
+        return text.charAt(++currentPosition);
     };
 
     const bulkNext = (c: string) => {
@@ -199,30 +197,28 @@ export default (text: string, fileName: string) => {
 
     const key = () => {
         let result = '';
-
         let quoted = false;
+
         if (currentCharacter === '"') {
             quoted = true;
             currentCharacter = nextCharacter('"');
         }
 
-        if (allowKeyChar.test(currentCharacter)) {
-            while (currentCharacter) {
-                if (quoted) {
-                    if (currentCharacter !== '"') {
-                        result += currentCharacter;
-                        currentCharacter = nextCharacter();
-                    } else {
-                        currentCharacter = nextCharacter('"');
-
-                        return result;
-                    }
-                } else if (currentCharacter !== ':') {
+        while (currentCharacter) {
+            if (quoted) {
+                if (currentCharacter !== '"') {
                     result += currentCharacter;
                     currentCharacter = nextCharacter();
                 } else {
+                    currentCharacter = nextCharacter('"');
+
                     return result;
                 }
+            } else if (currentCharacter !== ':') {
+                result += currentCharacter;
+                currentCharacter = nextCharacter();
+            } else {
+                return result;
             }
         }
 
