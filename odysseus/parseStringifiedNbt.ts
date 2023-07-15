@@ -1,8 +1,13 @@
 import {Json, JsonObject} from "./Json";
 
 export default (text: string, fileName: string) => {
+    let currentLine = 0;
+    let currentColumn = 0;
     let currentPosition = 0;
     let currentCharacter = text.charAt(currentPosition);
+
+    const createError = (message: string) =>
+        new SyntaxError(`Error parsing ${fileName}: ${message} at ${currentLine}:${currentColumn}`);
 
     const escapes = {
         '"': '"',
@@ -16,13 +21,21 @@ export default (text: string, fileName: string) => {
         t: '\t'
     };
 
+    const allowKeyChar = /[a-zA-Z0-9_]/;
+
     const nextCharacter = (c?: string) => {
         if (c && c !== currentCharacter) {
-            throw new SyntaxError(`Error parsing ${fileName}: Expected '${c}' instead of '${currentCharacter}' at ${currentPosition}`);
+            throw createError(`Expected '${c}' instead of '${currentCharacter}'`);
         }
 
-        currentPosition += 1;
-        return text.charAt(currentPosition);
+        if (currentCharacter === '\n') {
+            ++currentLine;
+            currentColumn = 0;
+        } else {
+            ++currentColumn;
+        }
+
+        return text.charAt(currentPosition++);
     };
 
     const bulkNext = (c: string) => {
@@ -101,7 +114,7 @@ export default (text: string, fileName: string) => {
                             let hex = parseInt(currentCharacter = nextCharacter(), 16);
 
                             if (!isFinite(hex)) {
-                                throw new SyntaxError(`Error parsing ${fileName}: Bad unicode escape at ${currentPosition}`);
+                                throw createError('Bad unicode escape');
                             }
 
                             characterCode = characterCode * 16 + hex;
@@ -121,7 +134,7 @@ export default (text: string, fileName: string) => {
             }
         }
 
-        throw new SyntaxError(`Error parsing ${fileName}: Bad string at ${currentPosition}`);
+        throw createError('Bad string');
     };
 
     const readWhitespace = () => {
@@ -143,7 +156,7 @@ export default (text: string, fileName: string) => {
                 return null;
         }
 
-        throw new SyntaxError(`Error parsing ${fileName}: Unexpected '${currentCharacter}' at ${currentPosition}`);
+        throw createError(`Unexpected '${currentCharacter}'`);
     };
 
     const array = () => {
@@ -181,26 +194,39 @@ export default (text: string, fileName: string) => {
             }
         }
 
-        throw new SyntaxError(`Error parsing ${fileName}: Bad array at ${currentPosition}`);
+        throw createError('Bad array');
     };
 
     const key = () => {
         let result = '';
 
+        let quoted = false;
         if (currentCharacter === '"') {
+            quoted = true;
             currentCharacter = nextCharacter('"');
         }
 
-        while (currentCharacter) {
-            if (currentCharacter !== ':') {
-                result += currentCharacter;
-                currentCharacter = nextCharacter();
-            } else {
-                return result;
+        if (allowKeyChar.test(currentCharacter)) {
+            while (currentCharacter) {
+                if (quoted) {
+                    if (currentCharacter !== '"') {
+                        result += currentCharacter;
+                        currentCharacter = nextCharacter();
+                    } else {
+                        currentCharacter = nextCharacter('"');
+
+                        return result;
+                    }
+                } else if (currentCharacter !== ':') {
+                    result += currentCharacter;
+                    currentCharacter = nextCharacter();
+                } else {
+                    return result;
+                }
             }
         }
 
-        throw new SyntaxError(`Error parsing ${fileName}: Bad key at ${currentPosition}`);
+        throw createError('Bad key');
     };
 
     const object = () => {
@@ -234,7 +260,7 @@ export default (text: string, fileName: string) => {
             readWhitespace();
         }
 
-        throw new SyntaxError(`Error parsing ${fileName}: EOF at ${currentPosition}`);
+        throw createError('EOF');
     }
 
     const value = (): Json => {
