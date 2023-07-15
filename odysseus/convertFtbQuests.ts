@@ -1,7 +1,7 @@
 import parseStringifiedNbt from "./parseStringifiedNbt";
 import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
-import {JsonObject} from "./Json";
+import {Json, JsonObject} from "./Json";
 import {UuidTool} from "uuid-tool";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
 
@@ -142,6 +142,7 @@ type QuestReward = BasicQuestObject & (Advancement | {
     type: FtbId<'item'>;
     item: Item;
     count?: number;
+    tag?: JsonObject;
     random_bonus?: number;
     only_one: boolean;
 } | {
@@ -556,9 +557,15 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
             }
         case "ftbquests:item":
         case "item":
+            const item = typeof reward.item === 'object' ? reward.item : { id: reward.item }
+
             return {
                 type: 'heracles:item',
-                item: reward.item
+                item: {
+                    id: item.id,
+                    count: reward.count ?? item.Count,
+                    nbt: reward.tag
+                }
             }
         case 'ftbquests:random':
         case 'random':

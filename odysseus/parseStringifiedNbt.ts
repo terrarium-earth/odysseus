@@ -16,8 +16,6 @@ export default (text: string, fileName: string) => {
         t: '\t'
     };
 
-    const allowKeyChar = /[a-zA-Z0-9_]/;
-
     const nextCharacter = (c?: string) => {
         if (c && c !== currentCharacter) {
             throw new SyntaxError(`Error parsing ${fileName}: Expected '${c}' instead of '${currentCharacter}' at ${currentPosition}`);
@@ -189,31 +187,16 @@ export default (text: string, fileName: string) => {
     const key = () => {
         let result = '';
 
-        let quoted = false;
         if (currentCharacter === '"') {
-            quoted = true;
             currentCharacter = nextCharacter('"');
         }
 
-        if (allowKeyChar.test(currentCharacter)) {
-            while (currentCharacter) {
-                if (quoted) {
-                    if (currentCharacter !== '"') {
-                        result += currentCharacter;
-                        currentCharacter = nextCharacter();
-                    } else {
-                        currentCharacter = nextCharacter('"');
-
-                        return result;
-                    }
-                } else {
-                    if (allowKeyChar.test(currentCharacter)) {
-                        result += currentCharacter;
-                        currentCharacter = nextCharacter();
-                    } else {
-                        return result;
-                    }
-                }
+        while (currentCharacter) {
+            if (currentCharacter !== ':') {
+                result += currentCharacter;
+                currentCharacter = nextCharacter();
+            } else {
+                return result;
             }
         }
 
