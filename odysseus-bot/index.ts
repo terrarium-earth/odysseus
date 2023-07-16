@@ -4,7 +4,7 @@ import {
     APIApplicationCommandInteractionDataAttachmentOption,
     APIApplicationCommandInteractionDataOption,
     APIApplicationCommandInteractionDataStringOption,
-    APIDMInteraction,
+    APIDMInteraction, APIEmbed,
     APIGuildInteraction,
     APIInteractionResponse,
     APIPingInteraction,
@@ -18,6 +18,7 @@ import JSZip from "jszip";
 import axios from "axios";
 import {REST} from "@discordjs/rest";
 import {convertFtbQuests, QuestInputFileSystem, QuestOutputFileSystem} from 'odysseus';
+import {EmbedBuilder} from "@discordjs/builders";
 
 const publicKey = process.env.CLIENT_PUBLIC_KEY;
 const discordToken = process.env.DISCORD_TOKEN;
@@ -136,11 +137,19 @@ async function handleInteraction(interaction: APIPingInteraction | APIDMInteract
         data: {flags: MessageFlags.Ephemeral}
     });
 
-    await convertFtbQuests(inputFileSystem, outputFileSystem);
+    const warningsEmbed = new EmbedBuilder().setTitle('Errors Encountered');
+    const warnings = await convertFtbQuests(inputFileSystem, outputFileSystem);
+
+    if (warnings.length) {
+        warningsEmbed.setDescription(warnings.join('\n\n'));
+    } else {
+        warningsEmbed.setDescription('None! :)');
+    }
 
     const body: RESTPatchAPIWebhookWithTokenMessageJSONBody = {
-        content: 'Success! The resulting quest-pack is attached below.',
-        attachments: [{id: '0'}]
+        content: 'The resulting quest-pack is attached below.',
+        attachments: [{id: '0'}],
+        embeds: [warningsEmbed.toJSON()]
     };
 
     await rest.patch(Routes.webhookMessage(interaction.application_id, interaction.token), {

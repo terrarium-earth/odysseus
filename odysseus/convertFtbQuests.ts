@@ -253,22 +253,36 @@ type Chapter = QuestObject & {
     quest_links: [];
 };
 
+class ConversionError extends Error {
+    constructor(message: string) {
+        super(message);
+    }
+}
+
 function convertIcon(icon: ResourceLocation | ItemStack) {
     return typeof icon === 'object' ? icon.id : icon;
 }
 
-function toObject<T extends QuestObject, R extends {}>(array: T[], convertor: (value: T) => R | null): Record<string, R> {
+function toObject<T extends QuestObject, R extends {}>(array: T[], warnings: Set<string>, convertor: (value: T) => R | null): Record<string, R> {
     return array.map(value => {
-        const data = convertor(value);
+        try {
+            const data = convertor(value);
 
-        if (!data) {
-            return null;
+            if (!data) {
+                return null;
+            }
+
+            return {
+                id: value.id,
+                data
+            };
+        } catch (error: unknown) {
+            if (error instanceof ConversionError) {
+                warnings.add(error.message);
+            } else {
+                throw error;
+            }
         }
-
-        return {
-            id: value.id,
-            data
-        };
     }).filter((value): value is { id: string; data: R; } => Boolean(value)).reduce((existing, current) => ({
         ...existing,
         [current.id]: current.data
@@ -319,6 +333,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
     }, {});
 
     const fileWrites: Promise<void>[] = [];
+    const warnings = new Set<string>();
 
     for (const group of [...groups, null]) {
         for (const chapter of groupedChapters[group?.id ?? ''] ?? []) {
@@ -334,8 +349,8 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                         quest.dependencies.map(id => id.toString(16).toUpperCase()) :
                         quest.dependencies,
 
-                    tasks: toObject(quest.tasks ?? [], task => convertTask(task, questFile)),
-                    rewards: toObject(quest.rewards ?? [], reward => convertReward(reward, rewardTables)),
+                    tasks: toObject(quest.tasks ?? [], warnings, task => convertTask(task, questFile)),
+                    rewards: toObject(quest.rewards ?? [], warnings, reward => convertReward(reward, rewardTables)),
 
                     display: {
                         title: quest.title,
@@ -375,6 +390,8 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
         ...fileWrites,
         output.writeFile(`groups.txt`, outputGroups.join('\n'))
     ]);
+
+    return [...warnings];
 }
 
 function parseBigInt(string: string, radix?: number) {
@@ -543,7 +560,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
             break;
         }
         default:
-            throw new Error(`Don't know how to convert task of type ${task.type}.`);
+            throw new ConversionError(`Don't know how to convert task of type ${task.type}.`);
     }
 }
 
@@ -593,7 +610,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
                     loot_table: rewardTable.loot_table_id
                 };
             } else {
-                throw new Error(`Don't know how to convert reward ${reward}`);
+                throw new ConversionError(`Don't know how to convert reward ${reward}`);
             }
         }
         case "ftbquests:xp_levels":
@@ -611,6 +628,6 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
                 amount: reward.xp ?? 100
             }
         default:
-            throw new Error(`Don't know how to convert reward of type ${reward.type}.`);
+            throw new ConversionError(`Don't know how to convert reward of type ${reward.type}.`);
     }
 }
