@@ -355,7 +355,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                     display: {
                         title: quest.title,
                         description: [
-                            `<h1>${quest.title}</h1>>`,
+                            `<h1>${quest.title}</h1>`,
                             '<hl>',
                             '</hl>',
                             ...quest.subtitle ? [
@@ -364,7 +364,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                                 '</br>'
                             ] : [],
                             ...quest.description ?? []
-                        ],
+                        ].map(encodeURIComponent),
 
                         icon: quest.icon ? {
                             type: 'heracles:item',
