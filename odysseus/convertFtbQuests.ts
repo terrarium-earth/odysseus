@@ -1,9 +1,10 @@
 import parseStringifiedNbt from "./parseStringifiedNbt";
 import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
-import {Json, JsonObject} from "./Json";
+import {JsonObject} from "./Json";
 import {UuidTool} from "uuid-tool";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
+import {escape} from 'he';
 
 const enum ObserveType {
     BLOCK,
@@ -364,7 +365,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                                 '</br>'
                             ] : [],
                             ...quest.description ?? []
-                        ].map(encodeURIComponent),
+                        ].map(escape),
 
                         icon: quest.icon ? {
                             type: 'heracles:item',
@@ -584,7 +585,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
             }
         case "ftbquests:item":
         case "item":
-            const item = typeof reward.item === 'object' ? reward.item : { id: reward.item }
+            const item = typeof reward.item === 'object' ? reward.item : {id: reward.item}
 
             return {
                 type: 'heracles:item',
