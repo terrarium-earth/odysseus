@@ -1,7 +1,7 @@
 import process from 'process';
 import fs from "fs";
 import {promisify} from "util";
-import {ConversionResult, convertFtbQuests, HeraclesQuest} from "odysseus";
+import {convertFtbQuests, QuestInputFileSystem, QuestOutputFileSystem} from "odysseus";
 
 const args = process.argv.slice(2);
 
@@ -56,6 +56,7 @@ if (!inputPath) {
 const writeFile = promisify(fs.writeFile);
 const readFile = promisify(fs.readFile);
 const readDir = promisify(fs.readdir);
+const mkdir = promisify(fs.mkdir);
 const exists = promisify(fs.exists);
 
 if (!type) {
@@ -70,39 +71,33 @@ if (!type) {
 
 const output = outputPath ?? './output';
 
-let conversionResult: Promise<ConversionResult>;
+const inputFileSystem: QuestInputFileSystem = {
+    async readFile(name: string) {
+        return (await readFile(`${inputPath}/${name}`)).toString();
+    },
 
-const readDirSafely = (directory: string) => exists(directory).then(exists => exists ?
-    readDir(directory).then(files =>
-        files.map(file => `${directory}/${file}`)
-    ) :
-    []
-);
+    async readDirectory(name: string) {
+        const path = `${inputPath}/${name}`;
+        const doesExist = await exists(path);
+
+        return doesExist ? Promise.all((await readDir(path)).map(async file => [(await readFile(`${path}/${file}`)).toString(), file])) : [];
+    }
+};
+
+const outputFileSystem: QuestOutputFileSystem = {
+    async writeFile(name: string, data: string) {
+        const path = `${output}/${name}`;
+
+        await mkdir(path.substring(0, path.lastIndexOf('.')), {recursive: true});
+
+        return writeFile(path, data);
+    },
+};
 
 if (type === 'ftb') {
-    conversionResult = Promise.all([
-        readFile(`${inputPath}/data.snbt`),
-        readFile(`${inputPath}/chapter_groups.snbt`),
-        readDirSafely(`${inputPath}/chapters`).then(chapterFiles => Promise.all(chapterFiles.map(file => readFile(file)))),
-        readDirSafely(`${inputPath}/reward_tables`).then(chapterFiles => Promise.all(chapterFiles.map(file => readFile(file))))
-    ]).then(([fileData, chapterGroups, chapters, rewardTables]) => convertFtbQuests({
-        fileData,
-        chapterGroups,
-        chapters,
-        rewardTables
-    }))
+    convertFtbQuests(inputFileSystem, outputFileSystem)
+        .then(warnings => console.warn(warnings.join('\n')))
+        .catch(console.error);
 } else {
     throw new Error('HQM is not yet supported!');
 }
-
-conversionResult.then(result => {
-    const write = () =>
-        Promise.all([
-            ...Object.entries(result.quests).map(([id, quest]) =>
-                writeFile(`${output}/${id}.json`, JSON.stringify(quest, null, 2))),
-
-            writeFile(`${output}/groups.txt`, result.groups.join('\n'))
-        ]);
-
-    return exists(output).then(exists => exists ? write() : promisify(fs.mkdir)(output).then(write))
-}).catch(console.error);
