@@ -295,7 +295,7 @@ function areNumericIds(array?: number[] | string[]): array is number[] {
 }
 
 function floatCoordinateToInt(value: number) {
-    return Math.round(value * 2);
+    return Math.round(value * 32);
 }
 
 export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
@@ -390,7 +390,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const groupPart = group?.title ? `${group.title}/` : '';
                 const chapterPart = chapter.title.toLowerCase().replaceAll(/[^a-z0-9]/g, '');
 
-                fileWrites.push(output.writeFile(`${groupPart}${chapterPart.length ? chapterPart : chapter.title}/${quest.id}.json`, JSON.stringify(heraclesQuest, null, 2)));
+                fileWrites.push(output.writeFile(`quests/${groupPart}${chapterPart.length ? chapterPart : chapter.title}/${quest.id}.json`, JSON.stringify(heraclesQuest, null, 2)));
             }
         }
     }
