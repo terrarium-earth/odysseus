@@ -11,7 +11,7 @@
   },
   "keywords": [],
   "author": "terrarium",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@discordjs/builders": "^1.6.3",
     "@discordjs/rest": "^1.7.1",

@@ -11,7 +11,7 @@
   },
   "keywords": [],
   "author": "terrarium",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "odysseus": "file:../odysseus"
   }
