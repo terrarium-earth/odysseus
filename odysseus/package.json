@@ -12,10 +12,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "he": "^1.2.0",
     "uuid-tool": "^2.0.3"
-  },
-  "devDependencies": {
-    "@types/he": "^1.2.0"
   }
 }

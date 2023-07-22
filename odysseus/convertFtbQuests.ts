@@ -4,7 +4,6 @@ import {HeraclesQuest, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQ
 import {JsonObject} from "./Json";
 import {UuidTool} from "uuid-tool";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
-import {escape} from 'he';
 
 const enum ObserveType {
     BLOCK,
@@ -35,6 +34,7 @@ type Custom = {
 type ItemStack = {
     id: ResourceLocation;
     Count?: number;
+    tag?: JsonObject;
 };
 
 type Item = ResourceLocation | ItemStack;
@@ -171,7 +171,7 @@ type QuestReward = BasicQuestObject & (Advancement | {
 
 type QuestObject = {
     id: string;
-    title: string;
+    title?: string;
     icon?: Item;
     tags?: string[];
     custom_id?: string;
@@ -336,11 +336,50 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
     const fileWrites: Promise<void>[] = [];
     const warnings = new Set<string>();
 
+    const formatString = (text: string) => {
+        let result = '';
+
+        for (let i = 0; i < text.length; ++i) {
+            const character = text.charAt(i);
+
+            if (character === '\\') {
+                result += text.charAt(++i);
+
+                continue;
+            }
+
+            if (character === '&') {
+                result += '§';
+
+                continue;
+            }
+
+            result += character;
+        }
+
+        return result;
+    };
+
     for (const group of [...groups, null]) {
+        const groupTitle = group?.title ? formatString(group.title) : undefined;
+
         for (const chapter of groupedChapters[group?.id ?? ''] ?? []) {
-            outputGroups.push(chapter.title);
+            const chapterTitle = chapter.title ? formatString(chapter.title) : undefined;
+
+            if (chapterTitle) {
+                outputGroups.push(chapterTitle);
+            }
 
             for (const quest of chapter.quests) {
+                const questTitle = quest.title ? formatString(quest.title) : undefined;
+                const questSubtitle = quest.subtitle ? formatString(quest.subtitle) : undefined;
+
+                const tasks = toObject(quest.tasks ?? [], warnings, task => convertTask(task, questFile));
+                const rewards = toObject(quest.rewards ?? [], warnings, reward => convertReward(reward, rewardTables));
+
+                const taskIds = Object.keys(tasks);
+                const rewardsIds = Object.keys(rewards);
+
                 const heraclesQuest: HeraclesQuest = {
                     settings: {
                         hidden: quest.hide
@@ -350,20 +389,29 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                         quest.dependencies.map(id => id.toString(16).toUpperCase()) :
                         quest.dependencies,
 
-                    tasks: toObject(quest.tasks ?? [], warnings, task => convertTask(task, questFile)),
-                    rewards: toObject(quest.rewards ?? [], warnings, reward => convertReward(reward, rewardTables)),
+                    tasks,
+                    rewards,
 
                     display: {
-                        title: quest.title,
+                        title: questTitle,
                         description: [
-                            `<h1>${quest.title}</h1>`,
-                            '<hl/>',
-                            ...quest.subtitle ? [
-                                quest.subtitle,
+                            `<h1>${questTitle}</h1>`,
+                            '<hr/>',
+                            ...questSubtitle ? [
+                                questSubtitle,
                                 '<br/>',
                             ] : [],
-                            ...quest.description ?? []
-                        ].map(escape),
+                            ...quest.description?.map(formatString)?.map(s => s.length ? s : '<br/>') ?? [],
+                            ...taskIds.length ? [
+                                'Tasks:',
+                                ...taskIds.map(taskId => `<task task="${taskId}" quest="${quest.id}"/>`)
+                            ] : [],
+
+                            ...rewardsIds.length ? [
+                                'Rewards:',
+                                ...rewardsIds.map(rewardId => `<reward reward="${rewardId}" quest="${quest.id}"/>`)
+                            ] : [],
+                        ],
 
                         icon: quest.icon ? {
                             type: 'heracles:item',
@@ -372,25 +420,25 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
 
                         icon_background: (quest.shape ?? chapter.default_quest_shape ?? questFile.default_quest_shape) === 'circle' ? 'heracles:textures/gui/quest_backgrounds/circles.png' : undefined,
 
-                        subtitle: quest.subtitle ? {
-                            text: quest.subtitle
+                        subtitle: questSubtitle ? {
+                            text: questSubtitle
                         } : undefined,
 
-                        groups: {
-                            [chapter.title]: {
+                        groups: chapterTitle ? {
+                            [chapterTitle]: {
                                 position: [
                                     floatCoordinateToInt(quest.x),
                                     floatCoordinateToInt(quest.y)
                                 ]
                             }
-                        }
+                        } : undefined
                     }
                 };
 
-                const groupPart = group?.title ? `${group.title}/` : '';
-                const chapterPart = chapter.title.toLowerCase().replaceAll(/[^a-z0-9]/g, '');
+                const groupPart = groupTitle ? `${groupTitle}/` : '';
+                const chapterPart = chapterTitle?.toLowerCase().replaceAll(/[^a-z0-9]/g, '');
 
-                fileWrites.push(output.writeFile(`quests/${groupPart}${chapterPart.length ? chapterPart : chapter.title}/${quest.id}.json`, JSON.stringify(heraclesQuest, null, 2)));
+                fileWrites.push(output.writeFile(`quests/${groupPart}${chapterPart?.length ? chapterPart : chapter.title}/${quest.id}.json`, JSON.stringify(heraclesQuest, null, 2)));
             }
         }
     }
@@ -433,12 +481,31 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                 collectionType = 'manual'
             }
 
-            return {
-                type: 'heracles:item',
-                amount: task.count,
-                item: typeof task.item === 'object' ? task.item.id : task.item,
-                collection_type: collectionType
-            };
+            if (typeof task.item === 'object') {
+                if (task.item.id === 'itemfilters:tag' && task.item.tag?.value) {
+                    return {
+                        type: 'heracles:item',
+                        amount: task.count,
+                        item: `#${task.item.tag?.value as ResourceLocation}`,
+                        collection_type: collectionType
+                    }
+                }
+
+                return {
+                    type: 'heracles:item',
+                    amount: task.count,
+                    item: task.item.id,
+                    collection_type: collectionType,
+                    nbt: task.item.tag
+                };
+            } else {
+                return {
+                    type: 'heracles:item',
+                    amount: task.count,
+                    item: task.item,
+                    collection_type: collectionType
+                };
+            }
         case "ftbquests:advancement":
         case "advancement":
             return {
@@ -488,7 +555,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                 icon: task.icon ? convertIcon(task.icon) : undefined,
 
                 title: {
-                    text: task.title
+                    text: task.title ?? ''
                 },
 
                 description: {
