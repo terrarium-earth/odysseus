@@ -158,7 +158,6 @@ export type HeraclesQuestTask = {
     to?: ResourceLocation;
 } | {
     type: 'heracles:check';
-    value: string;
 } | {
     type: 'heracles:composite';
     amount: number;
