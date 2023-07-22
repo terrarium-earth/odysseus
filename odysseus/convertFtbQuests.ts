@@ -2,7 +2,6 @@ import parseStringifiedNbt from "./parseStringifiedNbt";
 import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
 import {JsonObject} from "./Json";
-import {UuidTool} from "uuid-tool";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
 
 const enum ObserveType {
@@ -451,24 +450,12 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
     return [...warnings];
 }
 
-function parseBigInt(string: string, radix?: number) {
-    if (!radix) {
-        return BigInt(string);
-    }
-
-    const bigintRadix = BigInt(radix);
-    return [...string].reduce((previousValue, digit) => previousValue * bigintRadix + BigInt('0123456789abcdefghijklmnopqrstuvwxyz'.indexOf(digit)), 0n);
-}
-
 function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
     switch (task.type) {
         case "ftbquests:checkmark":
         case "checkmark": {
-            const id = parseBigInt(task.id, 16);
-
             return {
                 type: 'heracles:check',
-                value: UuidTool.toString([...new Uint8Array(BigUint64Array.from([id, id]).buffer)])
             };
         }
         case "ftbquests:item":
