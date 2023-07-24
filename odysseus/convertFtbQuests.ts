@@ -370,14 +370,29 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
             }
 
             for (const quest of chapter.quests) {
-                const questTitle = quest.title ? formatString(quest.title) : undefined;
-                const questSubtitle = quest.subtitle ? formatString(quest.subtitle) : undefined;
-
                 const tasks = toObject(quest.tasks ?? [], warnings, task => convertTask(task, questFile));
                 const rewards = toObject(quest.rewards ?? [], warnings, reward => convertReward(reward, rewardTables));
 
                 const taskIds = Object.keys(tasks);
                 const rewardsIds = Object.keys(rewards);
+
+                const inferData = () => {
+                    if (taskIds.length === 1) {
+                        const task = tasks[taskIds[0]];
+
+                        if (task.type === 'heracles:item') {
+                            return {
+                                title: `Gather ${task.item}`,
+                                icon: task.item.startsWith('#') ? undefined : task.item
+                            };
+                        }
+                    }
+                }
+
+                const inferredData = inferData();
+                const questTitle = quest.title ? formatString(quest.title) : inferredData?.title;
+                const questSubtitle = quest.subtitle ? formatString(quest.subtitle) : undefined;
+                const questIcon = quest.icon ?? inferredData?.icon;
 
                 const heraclesQuest: HeraclesQuest = {
                     settings: {
@@ -394,13 +409,18 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                     display: {
                         title: questTitle,
                         description: [
-                            `<h1>${questTitle}</h1>`,
-                            '<hr/>',
+                            ...questTitle ? [
+                                `<h1>${questTitle}</h1>`,
+                                '<hr/>',
+                            ] : [],
+
                             ...questSubtitle ? [
                                 questSubtitle,
                                 '<br/>',
                             ] : [],
+
                             ...quest.description?.map(formatString)?.map(s => s.length ? s : '<br/>') ?? [],
+
                             ...taskIds.length ? [
                                 'Tasks:',
                                 ...taskIds.map(taskId => `<task task="${taskId}" quest="${quest.id}"/>`)
@@ -412,12 +432,14 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                             ] : [],
                         ],
 
-                        icon: quest.icon ? {
+                        icon: questIcon ? {
                             type: 'heracles:item',
-                            item: convertIcon(quest.icon)
+                            item: convertIcon(questIcon)
                         } : undefined,
 
-                        icon_background: (quest.shape ?? chapter.default_quest_shape ?? questFile.default_quest_shape) === 'circle' ? 'heracles:textures/gui/quest_backgrounds/circles.png' : undefined,
+                        icon_background: (quest.shape ?? chapter.default_quest_shape ?? questFile.default_quest_shape) === 'circle' ?
+                            'heracles:textures/gui/quest_backgrounds/circles.png' :
+                            undefined,
 
                         subtitle: questSubtitle ? {
                             text: questSubtitle

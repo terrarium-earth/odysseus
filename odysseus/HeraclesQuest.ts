@@ -246,7 +246,7 @@ export type HeraclesQuest = {
     display?: {
         icon?: {
             type: 'heracles:item';
-            item: string;
+            item: ResourceLocation;
         };
 
         icon_background?: 'heracles:textures/gui/quest_backgrounds/default.png' | 'heracles:textures/gui/quest_backgrounds/circles.png';
