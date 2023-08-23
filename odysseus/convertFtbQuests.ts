@@ -666,7 +666,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
                 item: {
                     id: item.id,
                     count: reward.count ?? item.Count,
-                    nbt: reward.tag
+                    nbt: reward.tag ?? item.tag
                 }
             }
         case 'ftbquests:random':
