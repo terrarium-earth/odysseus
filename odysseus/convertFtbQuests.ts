@@ -269,8 +269,12 @@ function convertIcon(icon: ResourceLocation | ItemStack): HeraclesQuestIcon {
     const item: ResourceLocation = typeof icon === 'object' ? icon.id : icon;
     return {
         type: 'heracles:item',
-        item: item == 'ftbquests:book' ? 'heracles:quest_book' : item,
+        item: convertItemId(item),
     }
+}
+
+function convertItemId(id: ResourceLocation): ResourceLocation {
+    return id == 'ftbquests:book' ? 'heracles:quest_book' : id
 }
 
 function toObject<T extends QuestObject, R extends {}>(array: T[], warnings: Set<string>, convertor: (value: T) => R | null): Record<string, R> {
@@ -309,6 +313,50 @@ function floatCoordinateToInt(value: number) {
 
 function escapeFormatters(description: string[]) {
     return description.map(s => s.replaceAll('§', '&&'))
+}
+
+function inferTitle(t: HeraclesQuestTask): string | undefined {
+    switch (t.type) {
+            case 'heracles:item': return `Acquire: ${t.item}`;
+            case 'heracles:item_interaction': return `Interact: ${t.item}`;
+            case 'heracles:item_use': return `Use: ${t.item}`;
+            case 'heracles:stat': return `Increase ${t.stat}`;
+            case 'heracles:changed_dimension': return `Visit ${t.to}`;
+            case 'heracles:advancement': return `Complete ${t.advancements.length === 0 ? 'Advancement' : t.advancements[0]}`;
+            case 'heracles:structure': return `Find ${t.structures.length === 0 ? 'Structure' : t.structures[0]}`;
+            case 'heracles:biome': return `Visit ${t.biomes.length === 0 ? 'Biome' : t.biomes[0]}`;
+            case "heracles:check": return `Check this Task`;
+            case "heracles:block_interaction": return `Interact ${t.block}`;
+            case "heracles:entity_interaction": return `Interact: ${t.entity}`;
+            case "heracles:kill_entity": return `Kill: ${t.entity}`;
+            case "heracles:location": return `Visit a Location`;
+            case "heracles:recipe": return `Craft a Recipe`;
+            case "heracles:xp": return `Acquire XP`;
+            case "heracles:composite": return undefined;
+            case "heracles:dummy": return undefined;
+    }
+}
+
+function inferIcon (t: HeraclesQuestTask): HeraclesQuestIcon | undefined {
+    switch (t.type) {
+        case 'heracles:item': return t.item.startsWith('#') ? undefined : convertIcon(t.item);
+        case 'heracles:item_interaction': return t.item.startsWith('#') ? undefined : convertIcon(t.item);
+        case 'heracles:item_use': return t.item.startsWith('#') ? undefined : convertIcon(t.item);
+        case 'heracles:stat': return convertIcon('minecraft:spyglass');
+        case 'heracles:changed_dimension': return convertIcon('minecraft:netherrack');
+        case 'heracles:advancement': return convertIcon('minecraft:knowledge_book');
+        case 'heracles:structure': return convertIcon('minecraft:structure_block');
+        case 'heracles:biome': return convertIcon('minecraft:birch_sapling');
+        case "heracles:check": return convertIcon('minecraft:green_wool');
+        case "heracles:block_interaction": return t.block.startsWith('#') ? undefined : convertIcon(t.block);
+        case "heracles:entity_interaction": return t.entity.startsWith('#') ? undefined : convertIcon(t.entity + "_spawn_egg" as RegistryValue);
+        case "heracles:kill_entity": return t.entity.type.startsWith('#') ? undefined : convertIcon(t.entity.type + "_spawn_egg" as RegistryValue);
+        case "heracles:location": return convertIcon('minecraft:compass');
+        case "heracles:recipe": return convertIcon('minecraft:crafting_table');
+        case "heracles:xp": return convertIcon('minecraft:experience_bottle');
+        case "heracles:composite": return undefined;
+        case "heracles:dummy": return undefined;
+    }
 }
 
 export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
@@ -393,41 +441,9 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const inferData = () => {
                     if (taskIds.length === 1) {
                         const task = tasks[taskIds[0]];
-                        let title = undefined;
-                        let icon = undefined;
-                        if (task.title) title = task.title;
-                        if (task.icon) icon = task.icon;
-                        switch (task.type) {
-                            case 'heracles:item':
-                            case 'heracles:item_interaction':
-                            case 'heracles:item_use':
-                                if (!title) title = `Acquire: ${task.item}`;
-                                if (!icon) icon = task.item.startsWith('#') ? undefined : convertIcon(task.item);
-                                break;
-                            case 'heracles:stat':
-                                if (!title) title = `Increase ${task.stat}`;
-                                if (!icon) icon = convertIcon('minecraft:spyglass');
-                                break;
-                            case 'heracles:changed_dimension':
-                                if (!title) title = `Visit ${task.to}`;
-                                if (!icon) icon = convertIcon('minecraft:netherrack');
-                                break;
-                            case 'heracles:advancement':
-                                if (!title) title = `Complete ${task.advancements.length === 0 ? 'Advancement' : task.advancements[0]}`;
-                                if (!icon) icon = convertIcon('minecraft:knowledge_book');
-                                break;
-                            case 'heracles:structure':
-                                if (!title) title = `Find ${task.structures.length === 0 ? 'Structure' : task.structures[0]}`;
-                                if (!icon) icon = convertIcon('minecraft:structure_block');
-                                break;
-                            case 'heracles:biome':
-                                if (!title) title = `Visit ${task.biomes.length === 0 ? 'Biome' : task.biomes[0]}`;
-                                if (!icon) icon = convertIcon('minecraft:birch_sapling');
-                                break;
-                        }
                         return {
-                            title,
-                            icon
+                            title: task.title ?? inferTitle(task),
+                            icon: task.icon ?? inferIcon(task)
                         }
                     }
                 }
@@ -545,7 +561,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     ...taskBase,
                     type: 'heracles:item',
                     amount: task.count ? parseInt(task.count) : undefined,
-                    item: task.item.id == 'ftbquests:book' ? 'heracles:quest_book' : task.item.id,
+                    item: convertItemId(task.item.id),
                     collection_type: collectionType,
                     nbt: task.item.tag
                 };
@@ -715,7 +731,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
                 ...rewardBase,
                 type: 'heracles:item',
                 item: {
-                    id: item.id == 'ftbquests:book' ? 'heracles:quest_book' : item.id,
+                    id: convertItemId(item.id),
                     count: (reward.count ? parseInt(reward.count) : undefined) ?? (item.Count ? parseInt(item.Count.toString()) : undefined),
                     nbt: reward.tag ?? item.tag
                 }
