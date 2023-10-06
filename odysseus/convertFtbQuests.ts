@@ -306,6 +306,10 @@ function floatCoordinateToInt(value: number) {
     return Math.round(value * 32);
 }
 
+function escapeFormatters(description: string[]) {
+    return description.map(s => s.replaceAll('§', '&&'))
+}
+
 export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
     const readSNbtFile = async (name: string) =>
         parseStringifiedNbt(await input.readFile(name), name);
@@ -444,7 +448,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
 
                     display: {
                         title: questTitle,
-                        description: [
+                        description: escapeFormatters([
                             ...questSubtitle ? [
                                 `<h2>${questSubtitle}</h2>`,
                                 '<hr/>',
@@ -461,7 +465,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                                 '<hr/>',
                                 ...rewardsIds.map(rewardId => `<reward reward="${rewardId}" quest="${quest.id}"/>`)
                             ] : [],
-                        ],
+                        ]),
 
                         icon: questIcon ? convertIcon(questIcon) : undefined,
 
