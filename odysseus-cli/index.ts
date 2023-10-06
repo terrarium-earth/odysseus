@@ -88,7 +88,7 @@ const outputFileSystem: QuestOutputFileSystem = {
     async writeFile(name: string, data: string) {
         const path = `${output}/${name}`;
 
-        await mkdir(path.substring(0, path.lastIndexOf('.')), {recursive: true});
+        await mkdir(path.substring(0, path.lastIndexOf('/')), {recursive: true});
 
         return writeFile(path, data);
     },
