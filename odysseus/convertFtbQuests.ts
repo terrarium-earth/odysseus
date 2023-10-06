@@ -446,7 +446,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                         title: questTitle,
                         description: [
                             ...questSubtitle ? [
-                                `<h3>${questSubtitle}</h3>`,
+                                `<h2>${questSubtitle}</h2>`,
                                 '<hr/>',
                             ] : [],
 
