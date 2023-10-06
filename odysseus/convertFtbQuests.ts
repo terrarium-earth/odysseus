@@ -535,6 +535,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
         case "dimension":
             return {
                 type: 'heracles:changed_dimension',
+                from: 'minecraft:overworld',
                 to: task.dimension
             }
         case "ftbquests:kill":
