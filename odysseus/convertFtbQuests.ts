@@ -3,7 +3,6 @@ import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestIcon, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
 import {JsonObject} from "./Json";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
-import * as Hex from "./Hex";
 
 const enum ObserveType {
     BLOCK,
@@ -770,7 +769,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
             let rewardTable: RewardTable | undefined;
 
             if ('table_id' in reward) {
-                rewardTable = rewardTables.find(table => table.id === Hex.decToHex(reward.table_id));
+                rewardTable = rewardTables.find(table => table.id === BigInt(reward.table_id).toString(16).toUpperCase());
             }
 
             if (!rewardTable && reward.table_data) {
