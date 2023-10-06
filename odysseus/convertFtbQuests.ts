@@ -379,12 +379,39 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const inferData = () => {
                     if (taskIds.length === 1) {
                         const task = tasks[taskIds[0]];
-
-                        if (task.type === 'heracles:item') {
-                            return {
-                                title: `Gather ${task.item}`,
-                                icon: task.item.startsWith('#') ? undefined : task.item
-                            };
+                        switch (task.type) {
+                            case 'heracles:item':
+                            case 'heracles:item_interaction':
+                            case 'heracles:item_use':
+                                return {
+                                    title: `Acquire: ${task.item}`,
+                                    icon: task.item.startsWith('#') ? undefined : task.item
+                                };
+                            case 'heracles:stat':
+                                return {
+                                    title: `Increase ${task.stat}`,
+                                    icon: 'minecraft:spyglass' as ResourceLocation
+                                };
+                            case 'heracles:changed_dimension':
+                                return {
+                                    title: `Visit ${task.to}`,
+                                    icon: 'minecraft:netherrack' as ResourceLocation
+                                };
+                            case 'heracles:advancement':
+                                return {
+                                    title: `Complete ${task.advancements.length == 0 ? 'Advancement' : task.advancements[0]}`,
+                                    icon: 'minecraft:knowledge_book' as ResourceLocation
+                                };
+                            case 'heracles:structure':
+                                return {
+                                    title: `Find ${task.structures.length == 0 ? 'Structure' : task.structures[0]}`,
+                                    icon: 'minecraft:structure_block' as ResourceLocation
+                                };
+                            case 'heracles:biome':
+                                return {
+                                    title: `Visit ${task.biomes.length == 0 ? 'Biome' : task.biomes[0]}`,
+                                    icon: 'minecraft:birch_sapling' as ResourceLocation
+                                };
                         }
                     }
                 }
