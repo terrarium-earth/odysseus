@@ -1,6 +1,6 @@
 import parseStringifiedNbt from "./parseStringifiedNbt";
 import {RegistryValue, ResourceLocation, TagKey} from "./types";
-import {HeraclesQuest, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
+import {HeraclesQuest, HeraclesQuestIcon, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
 import {JsonObject} from "./Json";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
 
@@ -50,9 +50,12 @@ type RewardTable = BasicQuestObject & {
     hide_tooltip?: boolean;
     use_title?: boolean;
 
-    rewards: (QuestReward & {
+    rewards: {
+        item: ResourceLocation;
+        count?: number;
+        tag?: JsonObject;
         weight?: number;
-    })[];
+    }[];
 
     loot_crate?: {
         string_id: string;
@@ -70,7 +73,7 @@ type QuestTask = QuestObject & ({
 
     item: Item;
 
-    count?: number;
+    count?: Long;
     consume_items?: boolean;
     only_from_crafting?: boolean;
     match_nbt?: boolean;
@@ -134,6 +137,8 @@ type QuestTask = QuestObject & ({
 
 type QuestReward = BasicQuestObject & (Advancement | {
     type: FtbId<'choice'>;
+    table_id: Long;
+    table_data?: RewardTable;
 } | {
     type: FtbId<'command'>;
     command: string;
@@ -141,7 +146,7 @@ type QuestReward = BasicQuestObject & (Advancement | {
 } | {
     type: FtbId<'item'>;
     item: Item;
-    count?: number;
+    count?: Long;
     tag?: JsonObject;
     random_bonus?: number;
     only_one: boolean;
@@ -259,8 +264,16 @@ class ConversionError extends Error {
     }
 }
 
-function convertIcon(icon: ResourceLocation | ItemStack) {
-    return typeof icon === 'object' ? icon.id : icon;
+function convertIcon(icon: ResourceLocation | ItemStack): HeraclesQuestIcon {
+    const item: ResourceLocation = typeof icon === 'object' ? icon.id : icon;
+    return {
+        type: 'heracles:item',
+        item: convertItemId(item),
+    }
+}
+
+function convertItemId(id: ResourceLocation): ResourceLocation {
+    return id == 'ftbquests:book' ? 'heracles:quest_book' : id
 }
 
 function toObject<T extends QuestObject, R extends {}>(array: T[], warnings: Set<string>, convertor: (value: T) => R | null): Record<string, R> {
@@ -295,6 +308,54 @@ function areNumericIds(array?: number[] | string[]): array is number[] {
 
 function floatCoordinateToInt(value: number) {
     return Math.round(value * 32);
+}
+
+function escapeFormatters(description: string[]) {
+    return description.map(s => s.replaceAll('§', '&&'))
+}
+
+function inferTitle(t: HeraclesQuestTask): string | undefined {
+    switch (t.type) {
+            case 'heracles:item': return `Acquire: ${t.item}`;
+            case 'heracles:item_interaction': return `Interact: ${t.item}`;
+            case 'heracles:item_use': return `Use: ${t.item}`;
+            case 'heracles:stat': return `Increase ${t.stat}`;
+            case 'heracles:changed_dimension': return `Visit ${t.to}`;
+            case 'heracles:advancement': return `Complete ${t.advancements.length === 0 ? 'Advancement' : t.advancements[0]}`;
+            case 'heracles:structure': return `Find ${t.structures.length === 0 ? 'Structure' : t.structures[0]}`;
+            case 'heracles:biome': return `Visit ${t.biomes.length === 0 ? 'Biome' : t.biomes[0]}`;
+            case "heracles:check": return `Check this Task`;
+            case "heracles:block_interaction": return `Interact ${t.block}`;
+            case "heracles:entity_interaction": return `Interact: ${t.entity}`;
+            case "heracles:kill_entity": return `Kill: ${t.entity}`;
+            case "heracles:location": return `Visit a Location`;
+            case "heracles:recipe": return `Craft a Recipe`;
+            case "heracles:xp": return `Acquire XP`;
+            case "heracles:composite": return undefined;
+            case "heracles:dummy": return undefined;
+    }
+}
+
+function inferIcon (t: HeraclesQuestTask): HeraclesQuestIcon | undefined {
+    switch (t.type) {
+        case 'heracles:item': return t.item.startsWith('#') ? undefined : convertIcon(t.item);
+        case 'heracles:item_interaction': return t.item.startsWith('#') ? undefined : convertIcon(t.item);
+        case 'heracles:item_use': return t.item.startsWith('#') ? undefined : convertIcon(t.item);
+        case 'heracles:stat': return convertIcon('minecraft:spyglass');
+        case 'heracles:changed_dimension': return convertIcon('minecraft:netherrack');
+        case 'heracles:advancement': return convertIcon('minecraft:knowledge_book');
+        case 'heracles:structure': return convertIcon('minecraft:structure_block');
+        case 'heracles:biome': return convertIcon('minecraft:birch_sapling');
+        case "heracles:check": return convertIcon('minecraft:green_wool');
+        case "heracles:block_interaction": return t.block.startsWith('#') ? undefined : convertIcon(t.block);
+        case "heracles:entity_interaction": return t.entity.startsWith('#') ? undefined : convertIcon(t.entity + "_spawn_egg" as RegistryValue);
+        case "heracles:kill_entity": return t.entity.type.startsWith('#') ? undefined : convertIcon(t.entity.type + "_spawn_egg" as RegistryValue);
+        case "heracles:location": return convertIcon('minecraft:compass');
+        case "heracles:recipe": return convertIcon('minecraft:crafting_table');
+        case "heracles:xp": return convertIcon('minecraft:experience_bottle');
+        case "heracles:composite": return undefined;
+        case "heracles:dummy": return undefined;
+    }
 }
 
 export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
@@ -379,12 +440,9 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const inferData = () => {
                     if (taskIds.length === 1) {
                         const task = tasks[taskIds[0]];
-
-                        if (task.type === 'heracles:item') {
-                            return {
-                                title: `Gather ${task.item}`,
-                                icon: task.item.startsWith('#') ? undefined : task.item
-                            };
+                        return {
+                            title: task.title ?? inferTitle(task),
+                            icon: task.icon ?? inferIcon(task)
                         }
                     }
                 }
@@ -392,7 +450,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const inferredData = inferData();
                 const questTitle = quest.title ? formatString(quest.title) : inferredData?.title;
                 const questSubtitle = quest.subtitle ? formatString(quest.subtitle) : undefined;
-                const questIcon = quest.icon ?? inferredData?.icon;
+                const questIcon = quest.icon ? convertIcon(quest.icon) : inferredData?.icon;
 
                 const heraclesQuest: HeraclesQuest = {
                     settings: {
@@ -408,34 +466,26 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
 
                     display: {
                         title: questTitle,
-                        description: [
-                            ...questTitle ? [
-                                `<h1>${questTitle}</h1>`,
+                        description: escapeFormatters([
+                            ...questSubtitle ? [
+                                `<h2>${questSubtitle}</h2>`,
                                 '<hr/>',
                             ] : [],
 
-                            ...questSubtitle ? [
-                                questSubtitle,
-                                '<br/>',
+                            ...taskIds.length ? [
+                                ...taskIds.map(taskId => `<task task="${taskId}" quest="${quest.id}"/>`),
+                                '<hr/>',
                             ] : [],
 
                             ...quest.description?.map(formatString)?.map(s => s.length ? s : '<br/>') ?? [],
 
-                            ...taskIds.length ? [
-                                'Tasks:',
-                                ...taskIds.map(taskId => `<task task="${taskId}" quest="${quest.id}"/>`)
-                            ] : [],
-
                             ...rewardsIds.length ? [
-                                'Rewards:',
+                                '<hr/>',
                                 ...rewardsIds.map(rewardId => `<reward reward="${rewardId}" quest="${quest.id}"/>`)
                             ] : [],
-                        ],
+                        ]),
 
-                        icon: questIcon ? {
-                            type: 'heracles:item',
-                            item: convertIcon(questIcon)
-                        } : undefined,
+                        icon: questIcon,
 
                         icon_background: (quest.shape ?? chapter.default_quest_shape ?? questFile.default_quest_shape) === 'circle' ?
                             'heracles:textures/gui/quest_backgrounds/circles.png' :
@@ -456,7 +506,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                     }
                 };
 
-                const groupPart = groupTitle ? `${groupTitle}/` : '';
+                const groupPart = '';
                 const chapterPart = chapterTitle?.toLowerCase().replaceAll(/[^a-z0-9]/g, '');
 
                 fileWrites.push(output.writeFile(`quests/${groupPart}${chapterPart?.length ? chapterPart : chapter.title}/${quest.id}.json`, JSON.stringify(heraclesQuest, null, 2)));
@@ -473,10 +523,15 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
 }
 
 function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
+    const taskBase = {
+        title: task.title,
+        icon: task.icon ? convertIcon(task.icon) : undefined,
+    }
     switch (task.type) {
         case "ftbquests:checkmark":
         case "checkmark": {
             return {
+                ...taskBase,
                 type: 'heracles:check',
             };
         }
@@ -493,24 +548,27 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
             if (typeof task.item === 'object') {
                 if (task.item.id === 'itemfilters:tag' && task.item.tag?.value) {
                     return {
+                        ...taskBase,
                         type: 'heracles:item',
-                        amount: task.count,
+                        amount: task.count ? parseInt(task.count) : undefined,
                         item: `#${task.item.tag?.value as ResourceLocation}`,
                         collection_type: collectionType
                     }
                 }
 
                 return {
+                    ...taskBase,
                     type: 'heracles:item',
-                    amount: task.count,
-                    item: task.item.id,
+                    amount: task.count ? parseInt(task.count) : undefined,
+                    item: convertItemId(task.item.id),
                     collection_type: collectionType,
                     nbt: task.item.tag
                 };
             } else {
                 return {
+                    ...taskBase,
                     type: 'heracles:item',
-                    amount: task.count,
+                    amount: task.count ? parseInt(task.count) : undefined,
                     item: task.item,
                     collection_type: collectionType
                 };
@@ -518,24 +576,29 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
         case "ftbquests:advancement":
         case "advancement":
             return {
+                ...taskBase,
                 type: 'heracles:advancement',
                 advancements: [task.advancement]
             };
         case "ftbquests:biome":
         case "biome":
             return {
+                ...taskBase,
                 type: 'heracles:biome',
                 biomes: task.biome
             };
         case "ftbquests:dimension":
         case "dimension":
             return {
+                ...taskBase,
                 type: 'heracles:changed_dimension',
+                from: 'minecraft:overworld',
                 to: task.dimension
             }
         case "ftbquests:kill":
         case "kill":
             return {
+                ...taskBase,
                 type: 'heracles:kill_entity',
                 amount: parseInt(task.value),
                 entity: {
@@ -559,18 +622,9 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
             }
 
             return {
+                ...taskBase,
                 type: 'heracles:location',
-
-                icon: task.icon ? convertIcon(task.icon) : undefined,
-
-                title: {
-                    text: task.title ?? ''
-                },
-
-                description: {
-                    text: ''
-                },
-
+                description: '',
                 predicate: {
                     position: {
                         x: convertCoordinate(0),
@@ -582,6 +636,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
         case "ftbquests:stat":
         case "stat":
             return {
+                ...taskBase,
                 type: 'heracles:stat',
                 stat: task.stat,
                 target: task.value
@@ -589,6 +644,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
         case "ftbquests:structure":
         case "structure":
             return {
+                ...taskBase,
                 type: 'heracles:structure',
                 structures: task.structure
             };
@@ -599,6 +655,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                 case ObserveType.BLOCK_ENTITY_TYPE:
                 case ObserveType.BLOCK_TAG:
                     return {
+                        ...taskBase,
                         type: 'heracles:block_interaction',
                         block: task.to_observe
                     };
@@ -622,6 +679,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
 
                     if (nbtString) {
                         return {
+                            ...taskBase,
                             type: 'heracles:block_interaction',
                             block,
                             state,
@@ -630,6 +688,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     }
 
                     return {
+                        ...taskBase,
                         type: 'heracles:block_interaction',
                         block,
                         state
@@ -637,6 +696,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                 case ObserveType.ENTITY_TYPE:
                 case ObserveType.ENTITY_TYPE_TAG:
                     return {
+                        ...taskBase,
                         type: 'heracles:entity_interaction',
                         entity: task.to_observe
                     }
@@ -650,10 +710,15 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
 }
 
 function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIndex)[]): HeraclesQuestReward | null {
+    const rewardBase = {
+        title: reward.title,
+        icon: reward.icon ? convertIcon(reward.icon) : undefined,
+    }
     switch (reward.type) {
         case "ftbquests:command":
         case "command":
             return {
+                ...rewardBase,
                 type: 'heracles:command',
                 command: reward.command
             }
@@ -662,10 +727,11 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
             const item = typeof reward.item === 'object' ? reward.item : {id: reward.item}
 
             return {
+                ...rewardBase,
                 type: 'heracles:item',
                 item: {
-                    id: item.id,
-                    count: reward.count ?? item.Count,
+                    id: convertItemId(item.id),
+                    count: (reward.count ? parseInt(reward.count) : undefined) ?? (item.Count ? parseInt(item.Count.toString()) : undefined),
                     nbt: reward.tag ?? item.tag
                 }
             }
@@ -691,8 +757,44 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
 
             if (rewardTable.loot_table_id) {
                 return {
+                    ...rewardBase,
                     type: 'heracles:loottable',
                     loot_table: rewardTable.loot_table_id
+                };
+            } else {
+                throw new ConversionError(`Don't know how to convert reward ${reward}`);
+            }
+        }
+        case "choice": {
+            let rewardTable: RewardTable | undefined;
+            const hexId = BigInt(reward.table_id).toString(16).toUpperCase();
+            if ('table_id' in reward) {
+                rewardTable = rewardTables.find(table => table.id === hexId);
+            }
+
+            if (!rewardTable && reward.table_data) {
+                rewardTable = reward.table_data;
+            }
+
+            if (!rewardTable) {
+                return null;
+            }
+
+            if (rewardTable.rewards) {
+                let rewards: Record<string, HeraclesQuestReward> = {};
+                rewardTable.rewards.forEach((tableReward, i) => {
+                    rewards[reward.id + '_' + i] = {
+                        type: 'heracles:item',
+                        item: {
+                            id: tableReward.item,
+                            count: tableReward.count,
+                            nbt: tableReward.tag
+                        }
+                        };
+                });
+                return {
+                    type: 'heracles:selectable',
+                    rewards: rewards
                 };
             } else {
                 throw new ConversionError(`Don't know how to convert reward ${reward}`);
@@ -701,6 +803,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
         case "ftbquests:xp_levels":
         case "xp_levels":
             return {
+                ...rewardBase,
                 type: 'heracles:xp',
                 xptype: 'level',
                 amount: reward.xp_levels ?? 5
@@ -708,6 +811,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
         case "ftbquests:xp":
         case "xp":
             return {
+                ...rewardBase,
                 type: 'heracles:xp',
                 xptype: 'points',
                 amount: reward.xp ?? 100

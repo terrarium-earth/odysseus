@@ -1,6 +1,6 @@
 import {Component} from "./Component";
-import {Json, JsonObject} from "./Json";
-import {RegistryValue, ResourceLocation, TagKey} from "./types";
+import {JsonObject} from "./Json";
+import {RegistryValue, ResourceLocation} from "./types";
 
 type NumericRange = number | null | {
     min?: number;
@@ -140,7 +140,17 @@ type EntityPredicate = {
     team?: string;
 } | null;
 
-export type HeraclesQuestTask = {
+export type HeraclesQuestIcon = {
+    type: 'heracles:item';
+    item: ResourceLocation;
+};
+
+export type HeraclesQuestElement = {
+    title?: string;
+    icon?: HeraclesQuestIcon
+}
+
+export type HeraclesQuestTask = HeraclesQuestElement & ({
     type: 'heracles:advancement';
     advancements: ResourceLocation[];
 } | {
@@ -165,7 +175,7 @@ export type HeraclesQuestTask = {
 } | {
     type: 'heracles:dummy';
     value: string;
-    icon: string;
+    icon: HeraclesQuestIcon;
     title: string;
     description: string;
 } | {
@@ -199,9 +209,7 @@ export type HeraclesQuestTask = {
     amount?: number;
 } | {
     type: 'heracles:location';
-    icon?: ResourceLocation;
-    title: Component;
-    description: Component;
+    description: string;
     predicate: LocationPredicate;
 } | {
     type: 'heracles:recipe';
@@ -217,9 +225,9 @@ export type HeraclesQuestTask = {
     type: 'heracles:xp';
     amount?: number;
     xpType?: 'level' | 'points';
-};
+});
 
-export type HeraclesQuestReward = {
+export type HeraclesQuestReward = HeraclesQuestElement & ({
     type: 'heracles:command';
     command: string;
 } | {
@@ -240,14 +248,11 @@ export type HeraclesQuestReward = {
     type: 'heracles:xp';
     xptype?: 'level' | 'points';
     amount?: number;
-};
+});
 
 export type HeraclesQuest = {
     display?: {
-        icon?: {
-            type: 'heracles:item';
-            item: ResourceLocation;
-        };
+        icon?: HeraclesQuestIcon;
 
         icon_background?: 'heracles:textures/gui/quest_backgrounds/default.png' | 'heracles:textures/gui/quest_backgrounds/circles.png';
         title?: Component;
