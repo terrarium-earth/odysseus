@@ -767,9 +767,9 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
         }
         case "choice": {
             let rewardTable: RewardTable | undefined;
-
+            const hexId = BigInt(reward.table_id).toString(16).toUpperCase();
             if ('table_id' in reward) {
-                rewardTable = rewardTables.find(table => table.id === BigInt(reward.table_id).toString(16).toUpperCase());
+                rewardTable = rewardTables.find(table => table.id === hexId);
             }
 
             if (!rewardTable && reward.table_data) {
