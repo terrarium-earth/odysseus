@@ -137,3 +137,7 @@ dist
 
 # VSCode
 .vscode
+
+# CLI I/O
+odysseus-cli/quests
+odysseus-cli/output
