@@ -409,25 +409,20 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                     display: {
                         title: questTitle,
                         description: [
-                            ...questTitle ? [
-                                `<h1>${questTitle}</h1>`,
+                            ...questSubtitle ? [
+                                `<h3>${questSubtitle}</h3>`,
                                 '<hr/>',
                             ] : [],
 
-                            ...questSubtitle ? [
-                                questSubtitle,
-                                '<br/>',
+                            ...taskIds.length ? [
+                                ...taskIds.map(taskId => `<task task="${taskId}" quest="${quest.id}"/>`),
+                                '<hr/>',
                             ] : [],
 
                             ...quest.description?.map(formatString)?.map(s => s.length ? s : '<br/>') ?? [],
 
-                            ...taskIds.length ? [
-                                'Tasks:',
-                                ...taskIds.map(taskId => `<task task="${taskId}" quest="${quest.id}"/>`)
-                            ] : [],
-
                             ...rewardsIds.length ? [
-                                'Rewards:',
+                                '<hr/>',
                                 ...rewardsIds.map(rewardId => `<reward reward="${rewardId}" quest="${quest.id}"/>`)
                             ] : [],
                         ],
