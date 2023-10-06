@@ -3,6 +3,7 @@ import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
 import {JsonObject} from "./Json";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
+import * as Hex from "./Hex";
 
 const enum ObserveType {
     BLOCK,
@@ -50,9 +51,12 @@ type RewardTable = BasicQuestObject & {
     hide_tooltip?: boolean;
     use_title?: boolean;
 
-    rewards: (QuestReward & {
+    rewards: {
+        item: ResourceLocation;
+        count?: number;
+        tag?: JsonObject;
         weight?: number;
-    })[];
+    }[];
 
     loot_crate?: {
         string_id: string;
@@ -134,6 +138,8 @@ type QuestTask = QuestObject & ({
 
 type QuestReward = BasicQuestObject & (Advancement | {
     type: FtbId<'choice'>;
+    table_id: string;
+    table_data?: RewardTable;
 } | {
     type: FtbId<'command'>;
     command: string;
@@ -725,6 +731,41 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
                 return {
                     type: 'heracles:loottable',
                     loot_table: rewardTable.loot_table_id
+                };
+            } else {
+                throw new ConversionError(`Don't know how to convert reward ${reward}`);
+            }
+        }
+        case "choice": {
+            let rewardTable: RewardTable | undefined;
+
+            if ('table_id' in reward) {
+                rewardTable = rewardTables.find(table => table.id === Hex.decToHex(reward.table_id));
+            }
+
+            if (!rewardTable && reward.table_data) {
+                rewardTable = reward.table_data;
+            }
+
+            if (!rewardTable) {
+                return null;
+            }
+
+            if (rewardTable.rewards) {
+                let rewards: Record<string, HeraclesQuestReward> = {};
+                rewardTable.rewards.forEach((tableReward, i) => {
+                    rewards[reward.id + '_' + i] = {
+                        type: 'heracles:item',
+                        item: {
+                            id: tableReward.item,
+                            count: tableReward.count,
+                            nbt: tableReward.tag
+                        }
+                        };
+                });
+                return {
+                    type: 'heracles:selectable',
+                    rewards: rewards
                 };
             } else {
                 throw new ConversionError(`Don't know how to convert reward ${reward}`);
