@@ -74,7 +74,7 @@ type QuestTask = QuestObject & ({
 
     item: Item;
 
-    count?: number;
+    count?: string;
     consume_items?: boolean;
     only_from_crafting?: boolean;
     match_nbt?: boolean;
@@ -95,7 +95,7 @@ type QuestTask = QuestObject & ({
 } | {
     type: FtbId<'fluid'>;
     fluid: ResourceLocation;
-    amount: Long;
+    amount: string;
     nbt?: JsonObject;
 } | {
     type: FtbId<'kill'>;
@@ -147,7 +147,7 @@ type QuestReward = BasicQuestObject & (Advancement | {
 } | {
     type: FtbId<'item'>;
     item: Item;
-    count?: number;
+    count?: string;
     tag?: JsonObject;
     random_bonus?: number;
     only_one: boolean;
@@ -526,7 +526,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                         type: 'heracles:item',
                         title: task.title,
                         icon: task.icon ? convertIcon(task.icon) : undefined,
-                        amount: task.count,
+                        amount: task.count ? parseInt(task.count) : undefined,
                         item: `#${task.item.tag?.value as ResourceLocation}`,
                         collection_type: collectionType
                     }
@@ -537,7 +537,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                         type: 'heracles:item',
                         title: task.title,
                         icon: task.icon ? convertIcon(task.icon) : undefined,
-                        amount: task.count,
+                        amount: task.count ? parseInt(task.count) : undefined,
                         item: `heracles:quest_book`,
                         collection_type: collectionType
                     }
@@ -547,7 +547,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     type: 'heracles:item',
                     title: task.title,
                     icon: task.icon ? convertIcon(task.icon) : undefined,
-                    amount: task.count,
+                    amount: task.count ? parseInt(task.count) : undefined,
                     item: task.item.id,
                     collection_type: collectionType,
                     nbt: task.item.tag
@@ -557,7 +557,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     type: 'heracles:item',
                     title: task.title,
                     icon: task.icon ? convertIcon(task.icon) : undefined,
-                    amount: task.count,
+                    amount: task.count ? parseInt(task.count) : undefined,
                     item: task.item,
                     collection_type: collectionType
                 };
@@ -729,7 +729,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
                 icon: reward.icon ? convertIcon(reward.icon) : undefined,
                 item: {
                     id: item.id,
-                    count: reward.count ?? item.Count,
+                    count: (reward.count ? parseInt(reward.count) : undefined) ?? (item.Count ? parseInt(item.Count.toString()) : undefined),
                     nbt: reward.tag ?? item.tag
                 }
             }
