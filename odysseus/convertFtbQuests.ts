@@ -266,9 +266,10 @@ class ConversionError extends Error {
 }
 
 function convertIcon(icon: ResourceLocation | ItemStack): HeraclesQuestIcon {
+    const item: ResourceLocation = typeof icon === 'object' ? icon.id : icon;
     return {
         type: 'heracles:item',
-        item: typeof icon === 'object' ? icon.id : icon
+        item: item == 'ftbquests:book' ? 'heracles:quest_book' : item,
     }
 }
 
@@ -392,39 +393,41 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const inferData = () => {
                     if (taskIds.length === 1) {
                         const task = tasks[taskIds[0]];
+                        let title = undefined;
+                        let icon = undefined;
+                        if (task.title) title = task.title;
+                        if (task.icon) icon = task.icon;
                         switch (task.type) {
                             case 'heracles:item':
                             case 'heracles:item_interaction':
                             case 'heracles:item_use':
-                                return {
-                                    title: `Acquire: ${task.item}`,
-                                    icon: task.item.startsWith('#') ? undefined : task.item
-                                };
+                                if (!title) title = `Acquire: ${task.item}`;
+                                if (!icon) icon = task.item.startsWith('#') ? undefined : convertIcon(task.item);
+                                break;
                             case 'heracles:stat':
-                                return {
-                                    title: `Increase ${task.stat}`,
-                                    icon: 'minecraft:spyglass' as ResourceLocation
-                                };
+                                if (!title) title = `Increase ${task.stat}`;
+                                if (!icon) icon = convertIcon('minecraft:spyglass');
+                                break;
                             case 'heracles:changed_dimension':
-                                return {
-                                    title: `Visit ${task.to}`,
-                                    icon: 'minecraft:netherrack' as ResourceLocation
-                                };
+                                if (!title) title = `Visit ${task.to}`;
+                                if (!icon) icon = convertIcon('minecraft:netherrack');
+                                break;
                             case 'heracles:advancement':
-                                return {
-                                    title: `Complete ${task.advancements.length == 0 ? 'Advancement' : task.advancements[0]}`,
-                                    icon: 'minecraft:knowledge_book' as ResourceLocation
-                                };
+                                if (!title) title = `Complete ${task.advancements.length === 0 ? 'Advancement' : task.advancements[0]}`;
+                                if (!icon) icon = convertIcon('minecraft:knowledge_book');
+                                break;
                             case 'heracles:structure':
-                                return {
-                                    title: `Find ${task.structures.length == 0 ? 'Structure' : task.structures[0]}`,
-                                    icon: 'minecraft:structure_block' as ResourceLocation
-                                };
+                                if (!title) title = `Find ${task.structures.length === 0 ? 'Structure' : task.structures[0]}`;
+                                if (!icon) icon = convertIcon('minecraft:structure_block');
+                                break;
                             case 'heracles:biome':
-                                return {
-                                    title: `Visit ${task.biomes.length == 0 ? 'Biome' : task.biomes[0]}`,
-                                    icon: 'minecraft:birch_sapling' as ResourceLocation
-                                };
+                                if (!title) title = `Visit ${task.biomes.length === 0 ? 'Biome' : task.biomes[0]}`;
+                                if (!icon) icon = convertIcon('minecraft:birch_sapling');
+                                break;
+                        }
+                        return {
+                            title,
+                            icon
                         }
                     }
                 }
@@ -432,7 +435,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const inferredData = inferData();
                 const questTitle = quest.title ? formatString(quest.title) : inferredData?.title;
                 const questSubtitle = quest.subtitle ? formatString(quest.subtitle) : undefined;
-                const questIcon = quest.icon ?? inferredData?.icon;
+                const questIcon = quest.icon ? convertIcon(quest.icon) : inferredData?.icon;
 
                 const heraclesQuest: HeraclesQuest = {
                     settings: {
@@ -467,7 +470,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                             ] : [],
                         ]),
 
-                        icon: questIcon ? convertIcon(questIcon) : undefined,
+                        icon: questIcon,
 
                         icon_background: (quest.shape ?? chapter.default_quest_shape ?? questFile.default_quest_shape) === 'circle' ?
                             'heracles:textures/gui/quest_backgrounds/circles.png' :
@@ -536,23 +539,12 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     }
                 }
 
-                if (task.item.id === 'ftbquests:book') {
-                    return {
-                        type: 'heracles:item',
-                        title: task.title,
-                        icon: task.icon ? convertIcon(task.icon) : undefined,
-                        amount: task.count ? parseInt(task.count) : undefined,
-                        item: `heracles:quest_book`,
-                        collection_type: collectionType
-                    }
-                }
-
                 return {
                     type: 'heracles:item',
                     title: task.title,
                     icon: task.icon ? convertIcon(task.icon) : undefined,
                     amount: task.count ? parseInt(task.count) : undefined,
-                    item: task.item.id,
+                    item: task.item.id == 'ftbquests:book' ? 'heracles:quest_book' : task.item.id,
                     collection_type: collectionType,
                     nbt: task.item.tag
                 };
@@ -732,7 +724,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
                 title: reward.title,
                 icon: reward.icon ? convertIcon(reward.icon) : undefined,
                 item: {
-                    id: item.id,
+                    id: item.id == 'ftbquests:book' ? 'heracles:quest_book' : item.id,
                     count: (reward.count ? parseInt(reward.count) : undefined) ?? (item.Count ? parseInt(item.Count.toString()) : undefined),
                     nbt: reward.tag ?? item.tag
                 }
