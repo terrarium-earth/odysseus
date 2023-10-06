@@ -540,8 +540,6 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
             let collectionType: 'manual' | 'consume' | undefined = undefined;
 
             if (task.consume_items === true || questFile.default_consume_items === true) {
-                collectionType = 'consume'
-            } else if (task.consume_items === false || questFile.default_consume_items === false) {
                 collectionType = 'manual'
             }
 
