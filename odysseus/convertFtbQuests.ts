@@ -74,7 +74,7 @@ type QuestTask = QuestObject & ({
 
     item: Item;
 
-    count?: string;
+    count?: Long;
     consume_items?: boolean;
     only_from_crafting?: boolean;
     match_nbt?: boolean;
@@ -95,7 +95,7 @@ type QuestTask = QuestObject & ({
 } | {
     type: FtbId<'fluid'>;
     fluid: ResourceLocation;
-    amount: string;
+    amount: Long;
     nbt?: JsonObject;
 } | {
     type: FtbId<'kill'>;
@@ -147,7 +147,7 @@ type QuestReward = BasicQuestObject & (Advancement | {
 } | {
     type: FtbId<'item'>;
     item: Item;
-    count?: string;
+    count?: Long;
     tag?: JsonObject;
     random_bonus?: number;
     only_one: boolean;
