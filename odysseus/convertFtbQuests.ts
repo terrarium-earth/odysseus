@@ -495,6 +495,15 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     }
                 }
 
+                if (task.item.id === 'ftbquests:book') {
+                    return {
+                        type: 'heracles:item',
+                        amount: task.count,
+                        item: `heracles:quest_book`,
+                        collection_type: collectionType
+                    }
+                }
+
                 return {
                     type: 'heracles:item',
                     amount: task.count,
