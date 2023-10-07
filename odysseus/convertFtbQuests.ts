@@ -520,7 +520,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                         `quests/${groupPart}${chapterPart?.length ? chapterPart : chapter.title}/${quest.id}.json`,
                         JSON.stringify(
                             heraclesQuest,
-                            (_: string, value) => typeof value === 'bigint' ? value.toString() : value,
+                            (_, value) => typeof value === 'bigint' ? value.toString() : value,
                             2
                         )
                     )
