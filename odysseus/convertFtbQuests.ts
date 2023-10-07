@@ -537,10 +537,10 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
         }
         case "ftbquests:item":
         case "item":
-            let collectionType: 'manual' | 'consume' | undefined = undefined;
+            let collectionType: 'AUTOMATIC' | 'MANUAL' | 'CONSUME' | undefined = undefined;
 
             if (task.consume_items === true || questFile.default_consume_items === true) {
-                collectionType = 'manual'
+                collectionType = 'MANUAL'
             }
 
             if (typeof task.item === 'object') {
