@@ -87,7 +87,7 @@ export default (text: string, fileName: string) => {
             case 'I':
             case 'L':
                 currentCharacter = nextCharacter();
-                return string;
+                return BigInt(string);
             case 'F':
             case 'D':
                 currentCharacter = nextCharacter();
