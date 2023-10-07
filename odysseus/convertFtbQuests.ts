@@ -3,6 +3,7 @@ import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestIcon, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
 import {JsonObject, Long} from "./Json";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
+import * as JSONBigInt from 'json-bigint'
 
 const enum ObserveType {
     BLOCK,
@@ -344,7 +345,7 @@ function inferIcon (t: HeraclesQuestTask): HeraclesQuestIcon | undefined {
         case 'heracles:advancement': return convertIcon('minecraft:knowledge_book');
         case 'heracles:structure': return convertIcon('minecraft:structure_block');
         case 'heracles:biome': return convertIcon('minecraft:birch_sapling');
-        case "heracles:check": return convertIcon('minecraft:green_wool');
+        case "heracles:check": return convertIcon('miJSONBigIntnecraft:green_wool');
         case "heracles:block_interaction": return t.block.startsWith('#') ? undefined : convertIcon(t.block);
         case "heracles:entity_interaction": return t.entity.startsWith('#') ? undefined : convertIcon(t.entity + "_spawn_egg" as RegistryValue);
         case "heracles:kill_entity": return t.entity.type.startsWith('#') ? undefined : convertIcon(t.entity.type + "_spawn_egg" as RegistryValue);
@@ -518,11 +519,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 fileWrites.push(
                     output.writeFile(
                         `quests/${groupPart}${chapterPart?.length ? chapterPart : chapter.title}/${quest.id}.json`,
-                        JSON.stringify(
-                            heraclesQuest,
-                            (_, value) => typeof value === 'bigint' ? value.toString() : value,
-                            2
-                        )
+                        JSONBigInt.stringify(heraclesQuest, null, 2)
                     )
                 );
             }

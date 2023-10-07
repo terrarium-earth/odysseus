@@ -10,5 +10,11 @@
   },
   "keywords": [],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "json-bigint": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/json-bigint": "^1.0.2"
+  }
 }
