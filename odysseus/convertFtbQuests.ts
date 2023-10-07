@@ -550,7 +550,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                         type: 'heracles:item',
                         amount: task.count ? parseInt(task.count) : undefined,
                         item: `#${task.item.tag?.value as ResourceLocation}`,
-                        collection_type: collectionType
+                        collection: collectionType
                     }
                 }
 
@@ -559,7 +559,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     type: 'heracles:item',
                     amount: task.count ? parseInt(task.count) : undefined,
                     item: convertItemId(task.item.id),
-                    collection_type: collectionType,
+                    collection: collectionType,
                     nbt: task.item.tag
                 };
             } else {
@@ -568,7 +568,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     type: 'heracles:item',
                     amount: task.count ? parseInt(task.count) : undefined,
                     item: task.item,
-                    collection_type: collectionType
+                    collection: collectionType
                 };
             }
         case "ftbquests:advancement":
