@@ -1,4 +1,6 @@
-type JsonPrimitive = string | number | boolean | null;
+export type Long = bigint;
+
+export type JsonPrimitive = string | number | Long | boolean | null;
 
 export type JsonObject = {
     [name: string]: Json;

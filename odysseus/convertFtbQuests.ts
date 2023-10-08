@@ -1,8 +1,9 @@
 import parseStringifiedNbt from "./parseStringifiedNbt";
 import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestIcon, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
-import {JsonObject} from "./Json";
+import {JsonObject, Long} from "./Json";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
+import * as JSONBigInt from 'json-bigint'
 
 const enum ObserveType {
     BLOCK,
@@ -17,8 +18,6 @@ const enum ObserveType {
 type QuestShape = 'circle' | 'square' | 'pentagon' | 'hexagon' | 'gear';
 
 type FtbId<T extends string> = `ftbquests:${T}` | T;
-
-type Long = string;
 
 type Advancement = {
     type: FtbId<'advancement'>;
@@ -358,6 +357,14 @@ function inferIcon (t: HeraclesQuestTask): HeraclesQuestIcon | undefined {
     }
 }
 
+function truncateLong(value: Long | undefined) {
+    if (value === undefined) {
+        return undefined
+    }
+
+    return Number(value)
+}
+
 export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
     const readSNbtFile = async (name: string) =>
         parseStringifiedNbt(await input.readFile(name), name);
@@ -509,7 +516,12 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const groupPart = '';
                 const chapterPart = chapterTitle?.toLowerCase().replaceAll(/[^a-z0-9]/g, '');
 
-                fileWrites.push(output.writeFile(`quests/${groupPart}${chapterPart?.length ? chapterPart : chapter.title}/${quest.id}.json`, JSON.stringify(heraclesQuest, null, 2)));
+                fileWrites.push(
+                    output.writeFile(
+                        `quests/${groupPart}${chapterPart?.length ? chapterPart : chapter.title}/${quest.id}.json`,
+                        JSONBigInt.stringify(heraclesQuest, null, 2)
+                    )
+                );
             }
         }
     }
@@ -548,7 +560,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     return {
                         ...taskBase,
                         type: 'heracles:item',
-                        amount: task.count ? parseInt(task.count) : undefined,
+                        amount: truncateLong(task.count),
                         item: `#${task.item.tag?.value as ResourceLocation}`,
                         collection: collectionType
                     }
@@ -557,7 +569,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                 return {
                     ...taskBase,
                     type: 'heracles:item',
-                    amount: task.count ? parseInt(task.count) : undefined,
+                    amount: truncateLong(task.count),
                     item: convertItemId(task.item.id),
                     collection: collectionType,
                     nbt: task.item.tag
@@ -566,7 +578,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                 return {
                     ...taskBase,
                     type: 'heracles:item',
-                    amount: task.count ? parseInt(task.count) : undefined,
+                    amount: truncateLong(task.count),
                     item: task.item,
                     collection: collectionType
                 };
@@ -598,7 +610,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
             return {
                 ...taskBase,
                 type: 'heracles:kill_entity',
-                amount: parseInt(task.value),
+                amount: Number(task.value),
                 entity: {
                     type: task.entity
                 }
@@ -729,7 +741,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
                 type: 'heracles:item',
                 item: {
                     id: convertItemId(item.id),
-                    count: (reward.count ? parseInt(reward.count) : undefined) ?? (item.Count ? parseInt(item.Count.toString()) : undefined),
+                    count: truncateLong(reward.count) ?? item.Count,
                     nbt: reward.tag ?? item.tag
                 }
             }
