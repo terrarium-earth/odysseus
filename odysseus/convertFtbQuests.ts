@@ -1,7 +1,7 @@
 import parseStringifiedNbt from "./parseStringifiedNbt";
 import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestIcon, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
-import {JsonObject, Long} from "./Json";
+import {Json, JsonObject, Long} from "./Json";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
 import * as JSONBigInt from 'json-bigint'
 
@@ -273,6 +273,15 @@ function convertIcon(icon: ResourceLocation | ItemStack): HeraclesQuestIcon {
 
 function convertItemId(id: ResourceLocation): ResourceLocation {
     return id == 'ftbquests:book' ? 'heracles:quest_book' : id
+}
+
+function convertItemNbt(nbt: JsonObject | undefined): JsonObject | undefined {
+    if (nbt === undefined) return undefined;
+    let outNbt: JsonObject = {...nbt};
+    if (outNbt.Damage === 0) {
+        delete outNbt.Damage // Strip 0 damage requirements. FTB puts it on all damageables, and it's not often used.
+    }
+    return Object.keys(outNbt).length > 0 ? outNbt : undefined;
 }
 
 function toObject<T extends QuestObject, R extends {}>(array: T[], warnings: Set<string>, convertor: (value: T) => R | null): Record<string, R> {
@@ -572,7 +581,7 @@ function convertTask(task: QuestTask, questFile: QuestFile): HeraclesQuestTask {
                     amount: truncateLong(task.count),
                     item: convertItemId(task.item.id),
                     collection: collectionType,
-                    nbt: task.item.tag
+                    nbt: convertItemNbt(task.item.tag)
                 };
             } else {
                 return {
@@ -742,7 +751,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
                 item: {
                     id: convertItemId(item.id),
                     count: truncateLong(reward.count) ?? item.Count,
-                    nbt: reward.tag ?? item.tag
+                    nbt: convertItemNbt(reward.tag) ?? convertItemNbt(item.tag)
                 }
             }
         case 'ftbquests:random':
@@ -798,9 +807,9 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
                         item: {
                             id: tableReward.item,
                             count: tableReward.count,
-                            nbt: tableReward.tag
+                            nbt: convertItemNbt(tableReward.tag)
                         }
-                        };
+                    };
                 });
                 return {
                     type: 'heracles:selectable',
