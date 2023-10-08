@@ -278,8 +278,8 @@ function convertItemId(id: ResourceLocation): ResourceLocation {
 function convertItemNbt(nbt: JsonObject | undefined): JsonObject | undefined {
     if (nbt === undefined) return undefined;
     let outNbt: JsonObject = {...nbt};
-    if (nbt["Damage"] === 0) {
-        delete outNbt["Damage"] // Strip 0 damage requirements. FTB puts it on all damageables, and it's not often used.
+    if (outNbt.Damage === 0) {
+        delete outNbt.Damage // Strip 0 damage requirements. FTB puts it on all damageables, and it's not often used.
     }
     return Object.keys(outNbt).length > 0 ? outNbt : undefined;
 }
