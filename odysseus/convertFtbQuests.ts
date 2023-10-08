@@ -277,7 +277,7 @@ function convertItemId(id: ResourceLocation): ResourceLocation {
 
 function convertItemNbt(nbt: JsonObject | undefined): JsonObject | undefined {
     if (nbt === undefined) return undefined;
-    let outNbt = nbt;
+    let outNbt: JsonObject = {...nbt};
     if (nbt["Damage"] === 0) {
         delete outNbt["Damage"] // Strip 0 damage requirements. FTB puts it on all damageables, and it's not often used.
     }
