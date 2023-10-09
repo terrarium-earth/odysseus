@@ -1,7 +1,7 @@
 import parseStringifiedNbt from "./parseStringifiedNbt";
 import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestIcon, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
-import {Json, JsonObject, Long} from "./Json";
+import {JsonObject, Long} from "./Json";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
 import * as JSONBigInt from 'json-bigint'
 
@@ -50,8 +50,8 @@ type RewardTable = BasicQuestObject & {
     use_title?: boolean;
 
     rewards: {
-        item: ResourceLocation;
-        count?: number;
+        item: Item;
+        count?: Long;
         tag?: JsonObject;
         weight?: number;
     }[];
@@ -802,12 +802,13 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
             if (rewardTable.rewards) {
                 let rewards: Record<string, HeraclesQuestReward> = {};
                 rewardTable.rewards.forEach((tableReward, i) => {
+                    const item = typeof tableReward.item === 'object' ? tableReward.item : {id: tableReward.item}
                     rewards[reward.id + '_' + i] = {
                         type: 'heracles:item',
                         item: {
-                            id: tableReward.item,
-                            count: tableReward.count,
-                            nbt: convertItemNbt(tableReward.tag)
+                            id: convertItemId(item.id),
+                            count: truncateLong(tableReward.count) ?? item.Count,
+                            nbt: convertItemNbt(tableReward.tag) ?? convertItemNbt(item.tag)
                         }
                     };
                 });
