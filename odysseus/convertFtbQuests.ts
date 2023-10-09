@@ -1,7 +1,7 @@
 import parseStringifiedNbt from "./parseStringifiedNbt";
 import {RegistryValue, ResourceLocation, TagKey} from "./types";
 import {HeraclesQuest, HeraclesQuestIcon, HeraclesQuestReward, HeraclesQuestTask} from "./HeraclesQuest";
-import {Json, JsonObject, Long} from "./Json";
+import {JsonObject, Long} from "./Json";
 import {QuestInputFileSystem, QuestOutputFileSystem} from "./QuestFileSystem";
 import * as JSONBigInt from 'json-bigint'
 
@@ -15,7 +15,7 @@ const enum ObserveType {
     ENTITY_TYPE_TAG
 }
 
-type QuestShape = 'circle' | 'square' | 'pentagon' | 'hexagon' | 'gear';
+type QuestShape = 'circle' | 'square' | 'rsquare' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'gear' | 'heart';
 
 type FtbId<T extends string> = `ftbquests:${T}` | T;
 
@@ -37,6 +37,12 @@ type ItemStack = {
 
 type Item = ResourceLocation | ItemStack;
 
+type FtbItem = {
+    item: Item;
+    count?: Long;
+    tag?: JsonObject;
+}
+
 type EntityWeight = {
     passive?: number;
     monster?: number;
@@ -49,12 +55,9 @@ type RewardTable = BasicQuestObject & {
     hide_tooltip?: boolean;
     use_title?: boolean;
 
-    rewards: {
-        item: ResourceLocation;
-        count?: number;
-        tag?: JsonObject;
+    rewards: (FtbItem & {
         weight?: number;
-    }[];
+    })[];
 
     loot_crate?: {
         string_id: string;
@@ -67,18 +70,14 @@ type RewardTable = BasicQuestObject & {
     loot_table_id?: ResourceLocation;
 };
 
-type QuestTask = QuestObject & ({
+type QuestTask = QuestObject & ((FtbItem & {
     type: FtbId<'item'>;
-
-    item: Item;
-
-    count?: Long;
     consume_items?: boolean;
     only_from_crafting?: boolean;
     match_nbt?: boolean;
     weak_nbt_match?: boolean;
     task_screen_only?: boolean;
-} | {
+}) | {
     type: FtbId<'checkmark'>;
 } | Advancement | {
     type: FtbId<'biome'>;
@@ -142,14 +141,11 @@ type QuestReward = BasicQuestObject & (Advancement | {
     type: FtbId<'command'>;
     command: string;
     player_command?: boolean;
-} | {
+} | (FtbItem & {
     type: FtbId<'item'>;
-    item: Item;
-    count?: Long;
-    tag?: JsonObject;
     random_bonus?: number;
     only_one: boolean;
-} | {
+}) | {
     type: FtbId<'loot'> | FtbId<'random'>;
     table_id: string;
     table_data?: RewardTable;
@@ -282,6 +278,18 @@ function convertItemNbt(nbt: JsonObject | undefined): JsonObject | undefined {
         delete outNbt.Damage // Strip 0 damage requirements. FTB puts it on all damageables, and it's not often used.
     }
     return Object.keys(outNbt).length > 0 ? outNbt : undefined;
+}
+
+function convertItemReward(reward: FtbItem): HeraclesQuestReward {
+    const item = typeof reward.item === 'object' ? reward.item : {id: reward.item}
+    return {
+        type: 'heracles:item',
+        item: {
+            id: convertItemId(item.id),
+            count: truncateLong(reward.count) ?? item.Count,
+            nbt: convertItemNbt(reward.tag) ?? convertItemNbt(item.tag)
+        }
+    }
 }
 
 function toObject<T extends QuestObject, R extends {}>(array: T[], warnings: Set<string>, convertor: (value: T) => R | null): Record<string, R> {
@@ -743,16 +751,9 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
             }
         case "ftbquests:item":
         case "item":
-            const item = typeof reward.item === 'object' ? reward.item : {id: reward.item}
-
             return {
                 ...rewardBase,
-                type: 'heracles:item',
-                item: {
-                    id: convertItemId(item.id),
-                    count: truncateLong(reward.count) ?? item.Count,
-                    nbt: convertItemNbt(reward.tag) ?? convertItemNbt(item.tag)
-                }
+                ...convertItemReward(reward)
             }
         case 'ftbquests:random':
         case 'random':
@@ -802,14 +803,7 @@ function convertReward(reward: QuestReward, rewardTables: (RewardTable & OrderIn
             if (rewardTable.rewards) {
                 let rewards: Record<string, HeraclesQuestReward> = {};
                 rewardTable.rewards.forEach((tableReward, i) => {
-                    rewards[reward.id + '_' + i] = {
-                        type: 'heracles:item',
-                        item: {
-                            id: tableReward.item,
-                            count: tableReward.count,
-                            nbt: convertItemNbt(tableReward.tag)
-                        }
-                    };
+                    rewards[reward.id + '_' + i] = convertItemReward(tableReward);
                 });
                 return {
                     type: 'heracles:selectable',
