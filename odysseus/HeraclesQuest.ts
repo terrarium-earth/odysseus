@@ -254,7 +254,8 @@ export type HeraclesQuest = {
     display?: {
         icon?: HeraclesQuestIcon;
 
-        icon_background?: 'heracles:textures/gui/quest_backgrounds/default.png' | 'heracles:textures/gui/quest_backgrounds/circles.png';
+        //icon_background?: 'heracles:textures/gui/quest_backgrounds/default.png' | 'heracles:textures/gui/quest_backgrounds/circles.png';
+        icon_background?: string;
         title?: Component;
         subtitle?: Component;
         description?: string[];
