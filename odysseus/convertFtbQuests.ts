@@ -15,7 +15,7 @@ const enum ObserveType {
     ENTITY_TYPE_TAG
 }
 
-type QuestShape = 'circle' | 'square' | 'pentagon' | 'hexagon' | 'gear';
+type QuestShape = 'circle' | 'square' | 'rsquare' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'gear' | 'heart';
 
 type FtbId<T extends string> = `ftbquests:${T}` | T;
 
@@ -382,6 +382,21 @@ function truncateLong(value: Long | undefined) {
     return Number(value)
 }
 
+function iconBackgroundTexture(iconBackground: QuestShape | undefined) {
+	switch (iconBackground) {
+		case 'circle':	{ return 'heracles:textures/gui/quest_backgrounds/circles.png' }
+		case 'square':	{ return 'heracles:textures/gui/quest_backgrounds/squares.png' }
+		case 'rsquare': { return 'heracles:textures/gui/quest_backgrounds/rsquares.png' }
+		case 'diamond': { return 'heracles:textures/gui/quest_backgrounds/diamonds.png' }
+		case 'pentagon':{ return 'heracles:textures/gui/quest_backgrounds/pentagons.png' }
+		case 'hexagon': { return 'heracles:textures/gui/quest_backgrounds/hexagons.png' }
+		case 'octagon': { return 'heracles:textures/gui/quest_backgrounds/octagons.png' }
+		case 'gear': 		{ return 'heracles:textures/gui/quest_backgrounds/gears.png' }
+		case 'heart':		{ return 'heracles:textures/gui/quest_backgrounds/hearts.png' }
+		case undefined: { return undefined }
+	}
+}
+
 export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
     const readSNbtFile = async (name: string) =>
         parseStringifiedNbt(await input.readFile(name), name);
@@ -476,6 +491,8 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const questSubtitle = quest.subtitle ? formatString(quest.subtitle) : undefined;
                 const questIcon = quest.icon ? convertIcon(quest.icon) : inferredData?.icon;
 
+                const iconBackground = iconBackgroundTexture(quest.shape ?? chapter.default_quest_shape ?? questFile.default_quest_shape)
+
                 const heraclesQuest: HeraclesQuest = {
                     settings: {
                         hidden: quest.hide
@@ -511,9 +528,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
 
                         icon: questIcon,
 
-                        icon_background: (quest.shape ?? chapter.default_quest_shape ?? questFile.default_quest_shape) === 'circle' ?
-                            'heracles:textures/gui/quest_backgrounds/circles.png' :
-                            undefined,
+                        icon_background: iconBackground,
 
                         subtitle: questSubtitle ? {
                             text: questSubtitle
