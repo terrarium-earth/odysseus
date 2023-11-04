@@ -266,7 +266,7 @@ export type HeraclesQuest = {
 
     settings?: {
         individual_progress?: boolean;
-        hidden?: "COMPLETED" | "IN_PROGRESS" | "LOCKED";
+        hidden?: "LOCKED" | "IN_PROGRESS" | "COMPLETED" | "COMPLETED_CLAIMED";
     };
 
     dependencies?: string[];

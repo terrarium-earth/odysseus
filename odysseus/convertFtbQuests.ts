@@ -476,10 +476,16 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const questTitle = quest.title ? formatString(quest.title) : inferredData?.title;
                 const questSubtitle = quest.subtitle ? formatString(quest.subtitle) : undefined;
                 const questIcon = quest.icon ? convertIcon(quest.icon) : inferredData?.icon;
+                let hidden: "LOCKED" | "IN_PROGRESS" | "COMPLETED" | "COMPLETED_CLAIMED" | undefined = undefined;
+                if (quest.invisible) {
+                    hidden = "COMPLETED";
+                } else if (quest.hide) {
+                    hidden = "IN_PROGRESS";
+                }
 
                 const heraclesQuest: HeraclesQuest = {
                     settings: {
-                        hidden: quest.invisible ? "COMPLETED" : (quest.hide ? "IN_PROGRESS" : undefined)
+                        hidden
                     },
 
                     dependencies: areNumericIds(quest.dependencies) ?
