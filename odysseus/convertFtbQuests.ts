@@ -493,7 +493,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                         title: questTitle,
                         description: escapeFormatters([
                             ...questSubtitle ? [
-                                `<h2>${questSubtitle}</h2>`,
+                                `<subtitle id="${quest.id}" bold="true" centered="true" color="lightgray"/>`,
                                 '<hr/>',
                             ] : [],
 
