@@ -15,7 +15,7 @@ const enum ObserveType {
     ENTITY_TYPE_TAG
 }
 
-type QuestShape = 'circle' | 'square' | 'pentagon' | 'hexagon' | 'gear';
+type QuestShape = 'circle' | 'square' | 'rsquare' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'gear' | 'heart';
 
 type FtbId<T extends string> = `ftbquests:${T}` | T;
 
@@ -383,6 +383,10 @@ function truncateLong(value: Long | undefined) {
     return Number(value)
 }
 
+function iconBackgroundTexture(iconBackground: QuestShape | undefined): ResourceLocation | undefined {
+	return iconBackground === undefined ? undefined : `heracles:textures/gui/quest_backgrounds/${iconBackground}s.png`
+}
+
 export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
     const readSNbtFile = async (name: string) =>
         parseStringifiedNbt(await input.readFile(name), name);
@@ -484,6 +488,8 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                     hidden = "IN_PROGRESS";
                 }
 
+                const iconBackground = iconBackgroundTexture(quest.shape ?? chapter.default_quest_shape ?? questFile.default_quest_shape)
+
                 const heraclesQuest: HeraclesQuest = {
                     settings: {
                         hidden
@@ -519,9 +525,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
 
                         icon: questIcon,
 
-                        icon_background: (quest.shape ?? chapter.default_quest_shape ?? questFile.default_quest_shape) === 'circle' ?
-                            'heracles:textures/gui/quest_backgrounds/circles.png' :
-                            undefined,
+                        icon_background: iconBackground,
 
                         subtitle: questSubtitle ? {
                             text: questSubtitle
