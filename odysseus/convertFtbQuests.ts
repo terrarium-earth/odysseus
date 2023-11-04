@@ -383,19 +383,8 @@ function truncateLong(value: Long | undefined) {
     return Number(value)
 }
 
-function iconBackgroundTexture(iconBackground: QuestShape | undefined) {
-	switch (iconBackground) {
-		case 'circle': { return 'heracles:textures/gui/quest_backgrounds/circles.png' }
-		case 'square': { return 'heracles:textures/gui/quest_backgrounds/squares.png' }
-		case 'rsquare': { return 'heracles:textures/gui/quest_backgrounds/rsquares.png' }
-		case 'diamond': { return 'heracles:textures/gui/quest_backgrounds/diamonds.png' }
-		case 'pentagon': { return 'heracles:textures/gui/quest_backgrounds/pentagons.png' }
-		case 'hexagon': { return 'heracles:textures/gui/quest_backgrounds/hexagons.png' }
-		case 'octagon': { return 'heracles:textures/gui/quest_backgrounds/octagons.png' }
-		case 'gear': { return 'heracles:textures/gui/quest_backgrounds/gears.png' }
-		case 'heart': { return 'heracles:textures/gui/quest_backgrounds/hearts.png' }
-		case undefined: { return undefined }
-	}
+function iconBackgroundTexture(iconBackground: QuestShape | undefined): ResourceLocation | undefined {
+	return iconBackground === undefined ? undefined : `heracles:textures/gui/quest_backgrounds/${iconBackground}s.png`
 }
 
 export const convertFtbQuests = async (input: QuestInputFileSystem, output: QuestOutputFileSystem) => {
