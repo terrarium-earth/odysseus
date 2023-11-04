@@ -240,6 +240,7 @@ type Chapter = QuestObject & {
         min_required_dependencies?: number;
         dependencies?: number[] | string[];
         hide?: boolean;
+        invisible?: boolean;
         dependency_requirement: 'all_completed' | 'one_completed' | 'all_started' | 'one_started';
         hide_text_until_complete?: boolean;
         size?: number;
@@ -490,12 +491,19 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const questTitle = quest.title ? formatString(quest.title) : inferredData?.title;
                 const questSubtitle = quest.subtitle ? formatString(quest.subtitle) : undefined;
                 const questIcon = quest.icon ? convertIcon(quest.icon) : inferredData?.icon;
+                let hidden: "LOCKED" | "IN_PROGRESS" | "COMPLETED" | "COMPLETED_CLAIMED" | undefined = undefined;
+
+                if (quest.invisible) {
+                    hidden = "COMPLETED";
+                } else if (quest.hide) {
+                    hidden = "IN_PROGRESS";
+                }
 
                 const iconBackground = iconBackgroundTexture(quest.shape ?? chapter.default_quest_shape ?? questFile.default_quest_shape)
 
                 const heraclesQuest: HeraclesQuest = {
                     settings: {
-                        hidden: quest.hide
+                        hidden
                     },
 
                     dependencies: areNumericIds(quest.dependencies) ?
