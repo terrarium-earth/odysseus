@@ -253,7 +253,7 @@ export type HeraclesQuestReward = HeraclesQuestElement & ({
 export type HeraclesQuest = {
     display?: {
         icon?: HeraclesQuestIcon;
-        icon_background?: string;
+        icon_background?: ResourceLocation;
         title?: Component;
         subtitle?: Component;
         description?: string[];
