@@ -477,6 +477,7 @@ export const convertFtbQuests = async (input: QuestInputFileSystem, output: Ques
                 const questSubtitle = quest.subtitle ? formatString(quest.subtitle) : undefined;
                 const questIcon = quest.icon ? convertIcon(quest.icon) : inferredData?.icon;
                 let hidden: "LOCKED" | "IN_PROGRESS" | "COMPLETED" | "COMPLETED_CLAIMED" | undefined = undefined;
+
                 if (quest.invisible) {
                     hidden = "COMPLETED";
                 } else if (quest.hide) {
