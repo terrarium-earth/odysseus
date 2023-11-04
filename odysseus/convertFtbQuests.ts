@@ -503,9 +503,14 @@ function truncateLong(value: Long | undefined) {
 function iconBackgroundTexture(
     iconBackground: QuestShape | undefined,
 ): ResourceLocation | undefined {
-    return iconBackground === undefined
-        ? undefined
-        : `heracles:textures/gui/quest_backgrounds/${iconBackground}s.png`;
+    if (!iconBackground || iconBackground === "square") {
+        return;
+    }
+
+    const textureName =
+        iconBackground === "rsquare" ? "rounded_square" : iconBackground;
+
+    return `heracles:textures/gui/quest_backgrounds/${textureName}s.png`;
 }
 
 export const convertFtbQuests = async (
