@@ -385,15 +385,15 @@ function truncateLong(value: Long | undefined) {
 
 function iconBackgroundTexture(iconBackground: QuestShape | undefined) {
 	switch (iconBackground) {
-		case 'circle':	{ return 'heracles:textures/gui/quest_backgrounds/circles.png' }
-		case 'square':	{ return 'heracles:textures/gui/quest_backgrounds/squares.png' }
+		case 'circle': { return 'heracles:textures/gui/quest_backgrounds/circles.png' }
+		case 'square': { return 'heracles:textures/gui/quest_backgrounds/squares.png' }
 		case 'rsquare': { return 'heracles:textures/gui/quest_backgrounds/rsquares.png' }
 		case 'diamond': { return 'heracles:textures/gui/quest_backgrounds/diamonds.png' }
-		case 'pentagon':{ return 'heracles:textures/gui/quest_backgrounds/pentagons.png' }
+		case 'pentagon': { return 'heracles:textures/gui/quest_backgrounds/pentagons.png' }
 		case 'hexagon': { return 'heracles:textures/gui/quest_backgrounds/hexagons.png' }
 		case 'octagon': { return 'heracles:textures/gui/quest_backgrounds/octagons.png' }
-		case 'gear': 		{ return 'heracles:textures/gui/quest_backgrounds/gears.png' }
-		case 'heart':		{ return 'heracles:textures/gui/quest_backgrounds/hearts.png' }
+		case 'gear': { return 'heracles:textures/gui/quest_backgrounds/gears.png' }
+		case 'heart': { return 'heracles:textures/gui/quest_backgrounds/hearts.png' }
 		case undefined: { return undefined }
 	}
 }
