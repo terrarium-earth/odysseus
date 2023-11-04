@@ -1,5 +1,9 @@
 {
   "name": "odysseus",
+  "scripts": {
+    "lint": "eslint .",
+    "checkstyle": "prettier . --check"
+  },
   "workspaces": [
     "odysseus",
     "odysseus-bot",
@@ -7,6 +11,9 @@
   ],
   "devDependencies": {
     "@types/node": "^20.3.1",
+    "@typescript-eslint/eslint-plugin": "^6.9.1",
+    "eslint": "^8.53.0",
+    "prettier": "3.0.3",
     "typescript": "^5.1.3"
   }
 }

@@ -1,0 +1,21 @@
+{
+  "env": {
+    "node": true,
+    "es2021": true
+  },
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "project": [
+      "./odysseus/tsconfig.json",
+      "./odysseus-bot/tsconfig.json",
+      "./odysseus-cli/tsconfig.json"
+    ]
+  }
+}

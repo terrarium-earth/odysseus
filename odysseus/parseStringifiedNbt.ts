@@ -1,4 +1,4 @@
-import {Json, JsonObject} from "./Json";
+import { Json, JsonObject } from "./Json";
 
 export default (text: string, fileName: string) => {
     let currentLine = 0;
@@ -7,26 +7,30 @@ export default (text: string, fileName: string) => {
     let currentCharacter = text.charAt(currentPosition);
 
     const createError = (message: string) =>
-        new SyntaxError(`Error parsing ${fileName}: ${message} at ${currentLine}:${currentColumn}`);
+        new SyntaxError(
+            `Error parsing ${fileName}: ${message} at ${currentLine}:${currentColumn}`,
+        );
 
     const escapes = {
         '"': '"',
-        '\'': '\'',
-        '\\': '\\',
-        '/': '/',
-        b: 'b',
-        f: '\f',
-        n: '\n',
-        r: '\r',
-        t: '\t'
+        "'": "'",
+        "\\": "\\",
+        "/": "/",
+        b: "b",
+        f: "\f",
+        n: "\n",
+        r: "\r",
+        t: "\t",
     };
 
     const nextCharacter = (c?: string) => {
         if (c && c !== currentCharacter) {
-            throw createError(`Expected '${c}' instead of '${currentCharacter}'`);
+            throw createError(
+                `Expected '${c}' instead of '${currentCharacter}'`,
+            );
         }
 
-        if (currentCharacter === '\n') {
+        if (currentCharacter === "\n") {
             ++currentLine;
             currentColumn = 0;
         } else {
@@ -37,59 +41,63 @@ export default (text: string, fileName: string) => {
     };
 
     const bulkNext = (c: string) => {
-        let result = '';
+        let result = "";
         for (let i = 0; i < c.length; i++) {
-            result += (currentCharacter = nextCharacter(c[i]));
+            result += currentCharacter = nextCharacter(c[i]);
         }
         return result;
     };
 
     const number = () => {
-        let string = '';
+        let string = "";
         let float = false;
 
-        if (currentCharacter === '-') {
-            string = '-';
-            currentCharacter = nextCharacter('-');
+        if (currentCharacter === "-") {
+            string = "-";
+            currentCharacter = nextCharacter("-");
         }
 
-        while (currentCharacter >= '0' && currentCharacter <= '9') {
+        while (currentCharacter >= "0" && currentCharacter <= "9") {
             string += currentCharacter;
             currentCharacter = nextCharacter();
         }
 
-        if (currentCharacter === '.') {
-            string += '.';
-            while ((currentCharacter = nextCharacter()) && currentCharacter >= '0' && currentCharacter <= '9') {
+        if (currentCharacter === ".") {
+            string += ".";
+            while (
+                (currentCharacter = nextCharacter()) &&
+                currentCharacter >= "0" &&
+                currentCharacter <= "9"
+            ) {
                 string += currentCharacter;
             }
             float = true;
         }
 
-        if (currentCharacter === 'e' || currentCharacter === 'E') {
+        if (currentCharacter === "e" || currentCharacter === "E") {
             string += currentCharacter;
             currentCharacter = nextCharacter();
 
-            if (currentCharacter === '-' || currentCharacter === '+') {
+            if (currentCharacter === "-" || currentCharacter === "+") {
                 string += currentCharacter;
                 currentCharacter = nextCharacter();
             }
 
-            while (currentCharacter >= '0' && currentCharacter <= '9') {
+            while (currentCharacter >= "0" && currentCharacter <= "9") {
                 string += currentCharacter;
                 currentCharacter = nextCharacter();
             }
         }
 
         switch (currentCharacter.toUpperCase()) {
-            case 'B':
-            case 'S':
-            case 'I':
-            case 'L':
+            case "B":
+            case "S":
+            case "I":
+            case "L":
                 currentCharacter = nextCharacter();
                 return BigInt(string);
-            case 'F':
-            case 'D':
+            case "F":
+            case "D":
                 currentCharacter = nextCharacter();
                 return parseFloat(string);
             default:
@@ -99,27 +107,31 @@ export default (text: string, fileName: string) => {
 
     const string = () => {
         let quote;
-        let result = '';
+        let result = "";
 
         if (currentCharacter === '"' || currentCharacter === "'") {
             quote = currentCharacter;
-            while (currentCharacter = nextCharacter()) {
-                if (currentCharacter === '\\') {
+            while ((currentCharacter = nextCharacter())) {
+                if (currentCharacter === "\\") {
                     currentCharacter = nextCharacter();
-                    if (currentCharacter === 'u') {
+                    if (currentCharacter === "u") {
                         let characterCode = 0;
                         for (let i = 0; i < 4; i += 1) {
-                            let hex = parseInt(currentCharacter = nextCharacter(), 16);
+                            const hex = parseInt(
+                                (currentCharacter = nextCharacter()),
+                                16,
+                            );
 
                             if (!isFinite(hex)) {
-                                throw createError('Bad unicode escape');
+                                throw createError("Bad unicode escape");
                             }
 
                             characterCode = characterCode * 16 + hex;
                         }
                         result += String.fromCharCode(characterCode);
                     } else if (currentCharacter in escapes) {
-                        result += escapes[currentCharacter as keyof typeof escapes];
+                        result +=
+                            escapes[currentCharacter as keyof typeof escapes];
                     } else {
                         break;
                     }
@@ -132,25 +144,25 @@ export default (text: string, fileName: string) => {
             }
         }
 
-        throw createError('Bad string');
+        throw createError("Bad string");
     };
 
     const readWhitespace = () => {
-        while (currentCharacter && currentCharacter <= ' ') {
+        while (currentCharacter && currentCharacter <= " ") {
             currentCharacter = nextCharacter();
         }
-    }
+    };
 
     const word = () => {
         switch (currentCharacter) {
-            case 't':
-                bulkNext('true');
+            case "t":
+                bulkNext("true");
                 return true;
-            case 'f':
-                bulkNext('false');
+            case "f":
+                bulkNext("false");
                 return false;
-            case 'n':
-                bulkNext('null');
+            case "n":
+                bulkNext("null");
                 return null;
         }
 
@@ -158,20 +170,24 @@ export default (text: string, fileName: string) => {
     };
 
     const array = () => {
-        let result: Json[] = [];
+        const result: Json[] = [];
 
-        if (currentCharacter === '[') {
-            currentCharacter = nextCharacter('[');
+        if (currentCharacter === "[") {
+            currentCharacter = nextCharacter("[");
             readWhitespace();
 
-            if (['B', 'S', 'I', 'L', 'F', 'D'].includes(currentCharacter.toUpperCase())) {
+            if (
+                ["B", "S", "I", "L", "F", "D"].includes(
+                    currentCharacter.toUpperCase(),
+                )
+            ) {
                 currentCharacter = nextCharacter();
-                currentCharacter = nextCharacter(';');
+                currentCharacter = nextCharacter(";");
                 readWhitespace();
             }
 
-            if (currentCharacter === ']') {
-                currentCharacter = nextCharacter(']');
+            if (currentCharacter === "]") {
+                currentCharacter = nextCharacter("]");
                 return result;
             }
 
@@ -179,24 +195,24 @@ export default (text: string, fileName: string) => {
                 result.push(value());
                 readWhitespace();
 
-                if (currentCharacter === ']') {
-                    currentCharacter = nextCharacter(']');
+                if (currentCharacter === "]") {
+                    currentCharacter = nextCharacter("]");
                     return result;
                 }
 
-                if (currentCharacter === ',') {
-                    currentCharacter = nextCharacter(',');
+                if (currentCharacter === ",") {
+                    currentCharacter = nextCharacter(",");
                 }
 
                 readWhitespace();
             }
         }
 
-        throw createError('Bad array');
+        throw createError("Bad array");
     };
 
     const key = () => {
-        let result = '';
+        let result = "";
         let quoted = false;
 
         if (currentCharacter === '"') {
@@ -214,7 +230,7 @@ export default (text: string, fileName: string) => {
 
                     return result;
                 }
-            } else if (currentCharacter !== ':') {
+            } else if (currentCharacter !== ":") {
                 result += currentCharacter;
                 currentCharacter = nextCharacter();
             } else {
@@ -222,17 +238,17 @@ export default (text: string, fileName: string) => {
             }
         }
 
-        throw createError('Bad key');
+        throw createError("Bad key");
     };
 
     const object = () => {
         const result: JsonObject = {};
 
-        currentCharacter = nextCharacter('{');
+        currentCharacter = nextCharacter("{");
         readWhitespace();
 
-        if (currentCharacter === '}') {
-            currentCharacter = nextCharacter('}');
+        if (currentCharacter === "}") {
+            currentCharacter = nextCharacter("}");
             return result;
         }
 
@@ -240,42 +256,44 @@ export default (text: string, fileName: string) => {
             const k = key();
             readWhitespace();
 
-            currentCharacter = nextCharacter(':');
+            currentCharacter = nextCharacter(":");
             result[k] = value();
             readWhitespace();
 
-            if (currentCharacter === '}') {
-                currentCharacter = nextCharacter('}');
+            if (currentCharacter === "}") {
+                currentCharacter = nextCharacter("}");
                 return result;
             }
 
-            if (currentCharacter === ',') {
-                currentCharacter = nextCharacter(',');
+            if (currentCharacter === ",") {
+                currentCharacter = nextCharacter(",");
             }
 
             readWhitespace();
         }
 
-        throw createError('EOF');
-    }
+        throw createError("EOF");
+    };
 
     const value = (): Json => {
         readWhitespace();
 
         switch (currentCharacter) {
-            case '{':
+            case "{":
                 return object();
-            case '[':
+            case "[":
                 return array();
             case '"':
-            case '\'':
+            case "'":
                 return string();
-            case '-':
+            case "-":
                 return number();
             default:
-                return currentCharacter >= '0' && currentCharacter <= '9' ? number() : word();
+                return currentCharacter >= "0" && currentCharacter <= "9"
+                    ? number()
+                    : word();
         }
-    }
+    };
 
     return value();
-}
+};

@@ -9,10 +9,6 @@
     "strict": true,
     "target": "ES2021"
   },
-  "exclude": [
-    "node_modules"
-  ],
-  "lib": [
-    "es2021"
-  ]
+  "exclude": ["node_modules"],
+  "lib": ["es2021"]
 }
