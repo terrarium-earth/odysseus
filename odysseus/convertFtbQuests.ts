@@ -301,6 +301,7 @@ type Chapter = QuestObject & {
         dependencies?: number[] | string[];
         hide?: boolean;
         invisible?: boolean;
+        can_repeat?: boolean;
         dependency_requirement:
             | "all_completed"
             | "one_completed"
@@ -650,6 +651,7 @@ export const convertFtbQuests = async (
                 const heraclesQuest: HeraclesQuest = {
                     settings: {
                         hidden,
+                        repeatable: quest.can_repeat
                     },
 
                     dependencies: areNumericIds(quest.dependencies)
