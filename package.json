@@ -1,8 +1,8 @@
 {
   "name": "odysseus",
   "scripts": {
-    "lint": "eslint . && prettier . --check",
-    "lint:fix": "prettier . --write"
+    "lint": "eslint .",
+    "checkstyle": "prettier . --check"
   },
   "workspaces": [
     "odysseus",
