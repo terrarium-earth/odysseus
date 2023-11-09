@@ -2,7 +2,10 @@
   "name": "odysseus",
   "scripts": {
     "lint": "eslint .",
-    "checkstyle": "prettier . --check"
+    "lint:fix": "eslint . --fix",
+    "checkstyle": "prettier . --check",
+    "checkstyle:write": "prettier . --write",
+    "fix": "npm run lint:fix && npm run checkstyle:write"
   },
   "workspaces": [
     "odysseus",

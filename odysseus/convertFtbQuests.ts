@@ -651,7 +651,7 @@ export const convertFtbQuests = async (
                 const heraclesQuest: HeraclesQuest = {
                     settings: {
                         hidden,
-                        repeatable: quest.can_repeat
+                        repeatable: quest.can_repeat,
                     },
 
                     dependencies: areNumericIds(quest.dependencies)
