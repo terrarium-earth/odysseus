@@ -301,6 +301,7 @@ type Chapter = QuestObject & {
         dependencies?: number[] | string[];
         hide?: boolean;
         invisible?: boolean;
+        can_repeat?: boolean;
         dependency_requirement:
             | "all_completed"
             | "one_completed"
@@ -503,9 +504,14 @@ function truncateLong(value: Long | undefined) {
 function iconBackgroundTexture(
     iconBackground: QuestShape | undefined,
 ): ResourceLocation | undefined {
-    return iconBackground === undefined
-        ? undefined
-        : `heracles:textures/gui/quest_backgrounds/${iconBackground}s.png`;
+    if (!iconBackground || iconBackground === "square") {
+        return;
+    }
+
+    const textureName =
+        iconBackground === "rsquare" ? "rounded_square" : iconBackground;
+
+    return `heracles:textures/gui/quest_backgrounds/${textureName}s.png`;
 }
 
 export const convertFtbQuests = async (
@@ -692,6 +698,7 @@ export const convertFtbQuests = async (
                 const heraclesQuest: HeraclesQuest = {
                     settings: {
                         hidden,
+                        repeatable: quest.can_repeat,
                     },
 
                     dependencies: areNumericIds(quest.dependencies)
