@@ -599,11 +599,9 @@ export const convertFtbQuests = async (
                     text += `<img src="${obj.image}`;
 
                     if ("align" in obj) {
-                        const alignment = [
-                            "left",
-                            "middle",
-                            "right"
-                        ][parseInt(obj.align)];
+                        const alignment = ["left", "middle", "right"][
+                            parseInt(obj.align)
+                        ];
 
                         text += ` align="${alignment}"`;
                     }
