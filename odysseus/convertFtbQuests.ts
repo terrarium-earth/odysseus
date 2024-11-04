@@ -572,18 +572,20 @@ export const convertFtbQuests = async (
             }
 
             if (description && character === "{") {
-                let end = text.indexOf("}", i + 1);
+                const end = text.indexOf("}", i + 1);
 
                 const fieldsStrings = text.substring(i + 1, end).split(" ");
 
-                const fields = fieldsStrings.map((field): [name: string, value: string] => {
-                    const nameEnd = field.indexOf(":");
+                const fields = fieldsStrings.map(
+                    (field): [name: string, value: string] => {
+                        const nameEnd = field.indexOf(":");
 
-                    const name = field.substring(0, nameEnd);
-                    const value = field.substring(nameEnd + 1);
+                        const name = field.substring(0, nameEnd);
+                        const value = field.substring(nameEnd + 1);
 
-                    return [name, value];
-                });
+                        return [name, value];
+                    },
+                );
 
                 const obj = Object.fromEntries(fields);
 
@@ -591,7 +593,11 @@ export const convertFtbQuests = async (
                     text += `<img src="${obj.image}`;
 
                     if ("align" in obj) {
-                        let alignment = ["left", "middle", "right"][parseInt(obj.align)];
+                        const alignment = [
+                            "left",
+                            "middle",
+                            "right"
+                        ][parseInt(obj.align)];
 
                         text += ` align="${alignment}"`;
                     }
