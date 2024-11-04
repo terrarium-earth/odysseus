@@ -559,7 +559,7 @@ export const convertFtbQuests = async (
     const fileWrites: Promise<void>[] = [];
     const warnings = new Set<string>();
 
-    const formatString = (text: string) => {
+    const formatString = (text: string, description = false) => {
         let result = "";
 
         for (let i = 0; i < text.length; ++i) {
@@ -573,6 +573,51 @@ export const convertFtbQuests = async (
 
             if (character === "&") {
                 result += "§";
+
+                continue;
+            }
+
+            if (description && character === "{") {
+                const end = text.indexOf("}", i + 1);
+
+                const fieldsStrings = text.substring(i + 1, end).split(" ");
+
+                const fields = fieldsStrings.map(
+                    (field): [name: string, value: string] => {
+                        const nameEnd = field.indexOf(":");
+
+                        const name = field.substring(0, nameEnd);
+                        const value = field.substring(nameEnd + 1);
+
+                        return [name, value];
+                    },
+                );
+
+                const obj = Object.fromEntries(fields);
+
+                if ("image" in obj) {
+                    text += `<img src="${obj.image}`;
+
+                    if ("align" in obj) {
+                        const alignment = ["left", "middle", "right"][
+                            parseInt(obj.align)
+                        ];
+
+                        text += ` align="${alignment}"`;
+                    }
+
+                    if ("width" in obj) {
+                        text += ` width="${obj.width}"`;
+                    }
+
+                    if ("height" in obj) {
+                        text += ` height="${obj.height}"`;
+                    }
+
+                    text += "/>";
+                }
+
+                i = end;
 
                 continue;
             }
@@ -684,7 +729,7 @@ export const convertFtbQuests = async (
                                 : []),
 
                             ...(quest.description
-                                ?.map(formatString)
+                                ?.map((s) => formatString(s, true))
                                 ?.map((s) => (s.length ? s : "<br/>")) ?? []),
 
                             ...(rewardsIds.length
